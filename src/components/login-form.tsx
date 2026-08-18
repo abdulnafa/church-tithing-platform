@@ -40,11 +40,11 @@ export function LoginForm() {
 
       <label className="mt-5 block">
         <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">Email address</span>
-        <input className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]" defaultValue="alicia.clarke@example.com" name="email" required type="email" />
+        <input autoComplete="username" className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]" defaultValue="alicia.clarke@example.com" name="email" required type="email" />
       </label>
       <label className="mt-4 block">
-        <span className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--ink-soft)]"><span>Password</span><button className="text-[10px] text-[var(--sage)]" type="button">Forgot password?</button></span>
-        <input className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none" defaultValue="demo-password" minLength={8} name="password" required type="password" />
+        <span className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--ink-soft)]"><span>Password</span><button className="cursor-not-allowed text-[10px] text-[var(--muted)] opacity-70" disabled title="Password reset is unavailable in the demo" type="button">Reset unavailable in demo</button></span>
+        <input autoComplete="current-password" className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none" defaultValue="demo-password" minLength={8} name="password" required type="password" />
       </label>
       <button className="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--sage)] px-5 py-4 text-sm font-bold text-white transition hover:bg-[var(--sage-dark)]" type="submit">Open {roles.find((item) => item.id === role)?.label.toLowerCase()} demo <ArrowRightIcon size={17} /></button>
       <p className="mt-4 text-center text-[9px] leading-4 text-[var(--muted)]">Demo only. Supabase authentication will replace this preview hand-off when environment credentials are connected.</p>

@@ -1,6 +1,7 @@
 import type { CurrencyCode, GivingFrequency, Money } from "./types";
 
 const DEFAULT_LOCALE = "en-BB";
+const DEFAULT_TIME_ZONE = "America/Barbados";
 
 const currencyFractionDigits: Readonly<Record<CurrencyCode, number>> = {
   USD: 2,
@@ -55,12 +56,15 @@ export function formatDate(
   locale: string = DEFAULT_LOCALE,
 ): string {
   const date = toValidDate(value);
-  return new Intl.DateTimeFormat(locale, options).format(date);
+  return new Intl.DateTimeFormat(locale, {
+    timeZone: DEFAULT_TIME_ZONE,
+    ...options,
+  }).format(date);
 }
 
 export function formatDateTime(
   value: string | Date,
-  timeZone = "America/Barbados",
+  timeZone = DEFAULT_TIME_ZONE,
   locale: string = DEFAULT_LOCALE,
 ): string {
   const date = toValidDate(value);

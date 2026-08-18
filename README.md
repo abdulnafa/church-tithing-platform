@@ -139,7 +139,7 @@ Do not enable production donation checkout until all of the following are comple
 
 ## Deployment
 
-Deploy the Next.js application to a dedicated Vercel project and use a dedicated Supabase project. Configure separate Preview and Production variables, register environment-specific webhook endpoints, and verify the wildcard subdomain/DNS plan before issuing production QR codes.
+Deploy the Next.js application to a dedicated Vercel project and use a dedicated Supabase project. Configure separate Preview and Production variables, register environment-specific webhook endpoints, and verify the wildcard subdomain/DNS plan before issuing production QR codes. Vercel's production URL is used as a safe fallback when `NEXT_PUBLIC_APP_URL` is unset; set `NEXT_PUBLIC_APP_URL` explicitly to the approved custom domain before printing permanent QR codes.
 
 At minimum, run before release:
 

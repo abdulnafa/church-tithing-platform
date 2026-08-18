@@ -11,7 +11,7 @@ const features = [
 const steps = [
   ["01", "Scan", "Open the church giving page from a QR code or direct link."],
   ["02", "Choose", "Select a fund, amount and one-time or recurring frequency."],
-  ["03", "Give", "Complete secure card payment and receive a receipt instantly."],
+  ["03", "Give", "Continue to the church's secure provider and receive a receipt after confirmation."],
 ];
 
 export default function Home() {
@@ -34,7 +34,7 @@ export default function Home() {
         <div className="relative z-10 mx-auto grid max-w-7xl gap-14 px-5 pb-20 pt-14 sm:px-8 lg:grid-cols-[1.04fr_.96fr] lg:px-12 lg:pb-28 lg:pt-20">
           <div className="max-w-2xl animate-rise">
             <div className="mb-7 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.07] px-3 py-1.5 text-xs font-semibold tracking-wide text-white/80">
-              <span className="size-1.5 rounded-full bg-[var(--gold)]" /> Simple digital giving for modern churches
+              <span className="size-1.5 rounded-full bg-[var(--gold)]" /> Interactive pilot preview · Payments are not live
             </div>
             <h1 className="font-display max-w-xl text-5xl leading-[1.02] tracking-[-0.045em] sm:text-6xl lg:text-[74px]">Generosity,<span className="block text-[#c9e0d7]">made effortless.</span></h1>
             <p className="mt-7 max-w-xl text-lg leading-8 text-white/66 sm:text-xl">Give in seconds. Stay connected to what matters. Help your church grow with a secure platform built for every generation.</p>
@@ -44,7 +44,7 @@ export default function Home() {
             </div>
             <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-medium text-white/55">
               <span className="inline-flex items-center gap-2"><CheckIcon className="text-[#9dd0bd]" size={16} /> No app download</span>
-              <span className="inline-flex items-center gap-2"><CheckIcon className="text-[#9dd0bd]" size={16} /> Secure card payments</span>
+              <span className="inline-flex items-center gap-2"><CheckIcon className="text-[#9dd0bd]" size={16} /> No card data stored</span>
               <span className="inline-flex items-center gap-2"><CheckIcon className="text-[#9dd0bd]" size={16} /> Church-branded</span>
             </div>
           </div>
@@ -69,7 +69,7 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            <div className="glass-panel absolute -right-3 top-16 hidden w-44 rounded-2xl p-4 text-[var(--ink)] sm:block lg:-right-10"><div className="flex items-center gap-2 text-xs font-bold"><span className="grid size-7 place-items-center rounded-full bg-[var(--sage-pale)] text-[var(--sage)]"><CheckIcon size={15} /></span> Gift received</div><p className="mt-3 text-2xl font-bold tracking-tight">$50.00</p><p className="mt-1 text-[10px] text-[var(--muted)]">Monthly · Tithes</p></div>
+            <div className="glass-panel absolute -right-3 top-16 hidden w-44 rounded-2xl p-4 text-[var(--ink)] sm:block lg:-right-10"><div className="flex items-center gap-2 text-xs font-bold"><span className="grid size-7 place-items-center rounded-full bg-[var(--sage-pale)] text-[var(--sage)]"><CheckIcon size={15} /></span> Demo gift</div><p className="mt-3 text-2xl font-bold tracking-tight">$50.00</p><p className="mt-1 text-[10px] text-[var(--muted)]">Preview · Monthly tithes</p></div>
             <div className="glass-panel absolute -bottom-4 -left-3 hidden w-48 rounded-2xl p-4 text-[var(--ink)] sm:block lg:-left-10"><div className="flex items-center gap-3"><div className="grid size-9 place-items-center rounded-xl bg-[var(--gold-pale)] text-[var(--gold)]"><UsersIcon size={19} /></div><div><p className="text-lg font-bold">128</p><p className="text-[10px] text-[var(--muted)]">active givers</p></div></div></div>
           </div>
         </div>

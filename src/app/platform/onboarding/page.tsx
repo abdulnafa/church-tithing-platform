@@ -1,8 +1,13 @@
+import type { Metadata } from "next";
 import { ChurchOnboardingForm } from "@/components/church-onboarding-form";
 import { DashboardShell, SectionHeader } from "@/components/dashboard-shell";
 import { CheckIcon } from "@/components/icons";
 
 const outcomes = ["Creates a church-scoped workspace", "Adds the default Tithes fund", "Reserves a permanent QR resolver", "Keeps checkout disabled until verification"];
+
+export const metadata: Metadata = {
+  title: "Add a church",
+};
 
 export default function ChurchOnboardingPage() {
   return (

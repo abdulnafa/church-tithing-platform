@@ -21,7 +21,7 @@ export const demoChurch = {
   phone: "+1 (246) 555-0142",
   address: "Bridgetown, Saint Michael, Barbados",
   timezone: "America/Barbados",
-  status: "active",
+  status: "onboarding",
   defaultCurrency: "BBD",
   supportedCurrencies: ["BBD", "USD"],
   branding: {
@@ -33,16 +33,16 @@ export const demoChurch = {
   },
   paymentConnection: {
     providerKey: "mock-barbados-gateway",
-    externalMerchantReference: "merchant_demo_hgc",
-    status: "active",
+    externalMerchantReference: null,
+    status: "pending",
     settlementMode: "direct_to_church",
-    connectedAt: "2026-07-22T14:30:00.000Z",
+    connectedAt: null,
   },
   subscription: {
-    status: "active",
+    status: "incomplete",
     planName: "Church Essentials",
     monthlyPrice: { amountMinor: 9_900, currency: "USD" },
-    renewsAt: "2026-09-01T12:00:00.000Z",
+    renewsAt: null,
   },
   createdAt: "2026-07-18T13:00:00.000Z",
 } satisfies Church;

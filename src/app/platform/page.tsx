@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { DashboardShell, SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { ArrowRightIcon, CardIcon, ChartIcon, CheckIcon, HeartIcon, SettingsIcon, ShieldIcon, UsersIcon } from "@/components/icons";
 import { demoChurch, demoGivingSummary, formatMoney } from "@/lib";
+
+export const metadata: Metadata = {
+  title: "Platform dashboard",
+};
 
 const churches = [
   { name: "Harbour Grace Church", location: "Bridgetown, Barbados", status: "Pilot preview", subscription: "Test mode", provider: "Mock adapter", volume: "BBD $1,275", initials: "HG" },
@@ -11,7 +16,7 @@ const churches = [
 
 const onboardingSteps = [
   ["Church profile", "Complete"],
-  ["Subscription", "Complete"],
+  ["Subscription setup", "Waiting"],
   ["Local merchant connection", "Waiting"],
   ["Test donation and webhook", "Waiting"],
   ["Go-live review", "Waiting"],
@@ -32,7 +37,7 @@ export default function PlatformDashboardPage() {
           <StatCard icon={<UsersIcon size={19} />} label="Church pipeline" note="1 preview · 2 in progress" value="3" />
           <StatCard icon={<CardIcon size={19} />} label="Plan price" note="Canadian Stripe · test mode" tone="gold" value="USD $99" />
           <StatCard icon={<HeartIcon size={19} />} label="Demo donation volume" note="Seeded data · never held" tone="blue" value={formatMoney(demoGivingSummary.total)} />
-          <StatCard icon={<ChartIcon size={19} />} label="Launch controls" note="2 of 5 complete" tone="coral" value="40%" />
+          <StatCard icon={<ChartIcon size={19} />} label="Launch controls" note="1 of 5 complete" tone="coral" value="20%" />
         </div>
 
         <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px]">
@@ -58,10 +63,10 @@ export default function PlatformDashboardPage() {
             </section>
 
             <section className="grid gap-6 lg:grid-cols-2" id="reports">
-              <article className="soft-card rounded-[22px] p-5 sm:p-6">
+              <article className="soft-card scroll-mt-24 rounded-[22px] p-5 sm:p-6" id="subscriptions">
                 <SectionHeader eyebrow="Money flow 01" title="Platform subscription" />
                 <div className="mt-5 flex items-center gap-4 rounded-2xl bg-[var(--gold-pale)] p-4"><span className="grid size-11 place-items-center rounded-2xl bg-white text-[#a97722]"><CardIcon size={20} /></span><div><p className="text-sm font-bold">USD $99 / church / month</p><p className="mt-1 text-[10px] text-[var(--muted)]">Charged through the platform&apos;s Canadian Stripe account</p></div></div>
-                <div className="mt-5 space-y-3 text-[10px]"><FlowRow label="Active subscriptions" value="1" /><FlowRow label="Next renewal" value="1 Sep 2026" /><FlowRow label="Past due" value="0" /></div>
+                <div className="mt-5 space-y-3 text-[10px]"><FlowRow label="Active subscriptions" value="0 live" /><FlowRow label="Next renewal" value="Not scheduled" /><FlowRow label="Past due" value="0" /></div>
               </article>
               <article className="soft-card rounded-[22px] p-5 sm:p-6">
                 <SectionHeader eyebrow="Money flow 02" title="Church donations" />
@@ -82,8 +87,8 @@ export default function PlatformDashboardPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#ece9e1]"><div className="h-full w-2/5 rounded-full bg-[var(--sage)]" /></div>
-              <p className="mt-2 text-[9px] text-[var(--muted)]">2 of 5 launch controls complete</p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full bg-[#ece9e1]"><div className="h-full rounded-full bg-[var(--sage)]" style={{ width: "20%" }} /></div>
+              <p className="mt-2 text-[9px] text-[var(--muted)]">1 of 5 launch controls complete</p>
             </section>
 
             <section className="rounded-[22px] bg-[var(--ink)] p-5 text-white" id="settings">

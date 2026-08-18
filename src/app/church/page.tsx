@@ -1,8 +1,10 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ChurchTransactions } from "@/components/church-transactions";
 import { DashboardShell, SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { GivingQr } from "@/components/giving-qr";
 import { ArrowRightIcon, CalendarIcon, CardIcon, CheckIcon, HeartIcon, SettingsIcon, UsersIcon } from "@/components/icons";
+import { getPublicAppUrl, isLocalAppUrl } from "@/lib/public-app-url";
 import {
   calculateProgress,
   demoCampaigns,
@@ -19,9 +21,13 @@ import {
   formatPercentage,
 } from "@/lib";
 
+export const metadata: Metadata = {
+  title: "Church dashboard",
+};
+
 export default function ChurchDashboardPage() {
   const maximumTrend = Math.max(...demoGivingTrend.map((point) => point.total.amountMinor));
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const appUrl = getPublicAppUrl();
   const givingUrl = `${appUrl}/q/${demoQrCode}`;
   const netGiving = demoDonations.reduce((sum, donation) => sum + donation.netAmount.amountMinor, 0);
 
@@ -51,7 +57,7 @@ export default function ChurchDashboardPage() {
           <div className="min-w-0 space-y-6">
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="reports">
               <SectionHeader
-                action={<button className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[9px] font-bold">Last 6 weeks</button>}
+                action={<span className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[10px] font-bold">Last 6 weeks</span>}
                 eyebrow="Giving trend"
                 title="Weekly giving"
               />
@@ -83,7 +89,7 @@ export default function ChurchDashboardPage() {
 
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="campaigns">
               <SectionHeader
-                action={<button className="text-[10px] font-bold text-[var(--sage)]">+ New campaign</button>}
+                action={<button className="cursor-not-allowed text-[10px] font-bold text-[var(--muted)] opacity-70" disabled title="Campaign management is coming soon">+ New campaign · Coming soon</button>}
                 eyebrow="Funds & campaigns"
                 title="Active campaigns"
               />
@@ -112,11 +118,11 @@ export default function ChurchDashboardPage() {
                 <GivingQr churchName={demoChurch.name} value={givingUrl} />
               </div>
               <p className="mt-3 break-all text-center text-[9px] text-[var(--muted)]">{givingUrl}</p>
-              {appUrl.includes("localhost") && <p className="mt-2 rounded-xl bg-[var(--gold-pale)] px-3 py-2 text-center text-[9px] leading-4 text-[#8a641f]">Local preview QR. Set NEXT_PUBLIC_APP_URL to the approved public domain before printing.</p>}
+              {isLocalAppUrl(appUrl) && <p className="mt-2 rounded-xl bg-[var(--gold-pale)] px-3 py-2 text-center text-[10px] leading-4 text-[#8a641f]">Local preview QR. Set NEXT_PUBLIC_APP_URL to the approved public domain before printing.</p>}
             </section>
 
             <section className="soft-card rounded-[22px] p-5" id="members">
-              <SectionHeader action={<button className="text-[9px] font-bold text-[var(--sage)]">View all</button>} title="Recurring members" />
+              <SectionHeader action={<span className="text-[10px] font-bold text-[var(--muted)]">2 active</span>} title="Recurring members" />
               <div className="mt-4 divide-y divide-[var(--line)]">
                 {demoRecurringGifts.map((gift) => {
                   const member = demoMembers.find((item) => item.id === gift.memberId);

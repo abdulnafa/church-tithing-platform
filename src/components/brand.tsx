@@ -16,6 +16,7 @@ export function Brand({ compact = false, href = "/", inverted = false }: BrandPr
           <path d="M16 20c5.8 0 9-3.1 9-8-5.8 0-9 3.1-9 8Z" fill="currentColor" opacity=".58" />
         </svg>
       </span>
+      {compact && <span className="sr-only">Kindred Giving home</span>}
       {!compact && (
         <span className="leading-none">
           <span className={`block text-[17px] font-bold tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>Kindred</span>

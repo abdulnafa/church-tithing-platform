@@ -108,6 +108,9 @@ export function GivingForm({ campaigns = [], churchName, currency, funds }: Givi
 
   return (
     <form className="soft-card min-w-0 max-w-full overflow-hidden rounded-[26px] p-5 sm:p-8" onSubmit={handleDetails}>
+      <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] font-medium leading-5 text-amber-900" role="status">
+        Interactive demo: no payment will be processed. Please use sample details only.
+      </div>
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--sage)]">Step 1 of 2</p>
       <h2 className="font-display mt-2 text-3xl tracking-[-0.035em]">Choose your gift</h2>
       <div className="mt-6">
