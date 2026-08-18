@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChurchTransactions } from "@/components/church-transactions";
-import { DashboardShell, SectionHeader, StatCard } from "@/components/dashboard-shell";
+import { SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { GivingQr } from "@/components/giving-qr";
 import { ArrowRightIcon, CalendarIcon, CardIcon, CheckIcon, HeartIcon, SettingsIcon, UsersIcon } from "@/components/icons";
 import { getPublicAppUrl, isLocalAppUrl } from "@/lib/public-app-url";
@@ -22,7 +22,7 @@ import {
 } from "@/lib";
 
 export const metadata: Metadata = {
-  title: "Church dashboard",
+  title: "Church overview",
 };
 
 export default function ChurchDashboardPage() {
@@ -32,8 +32,7 @@ export default function ChurchDashboardPage() {
   const netGiving = demoDonations.reduce((sum, donation) => sum + donation.netAmount.amountMinor, 0);
 
   return (
-    <DashboardShell kind="church" subtitle="Harbour Grace Church · 11–17 August 2026" title="Church overview">
-      <div className="mx-auto max-w-[1320px] pb-24">
+    <div className="mx-auto max-w-[1320px] pb-24">
         <div className="mb-6 flex flex-col gap-4 lg:hidden">
           <div><p className="text-xs text-[var(--muted)]">Good morning, Miriam</p><h1 className="font-display mt-1 text-3xl tracking-[-0.035em]">Church overview</h1></div>
         </div>
@@ -57,7 +56,7 @@ export default function ChurchDashboardPage() {
           <div className="min-w-0 space-y-6">
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="reports">
               <SectionHeader
-                action={<span className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[10px] font-bold">Last 6 weeks</span>}
+                action={<Link className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[10px] font-bold text-[var(--sage)]" href="/church/reports">Full report →</Link>}
                 eyebrow="Giving trend"
                 title="Weekly giving"
               />
@@ -83,13 +82,13 @@ export default function ChurchDashboardPage() {
             </section>
 
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="transactions">
-              <SectionHeader eyebrow="Bookkeeping" title="Recent transactions" />
+              <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/transactions">View all →</Link>} eyebrow="Bookkeeping" title="Recent transactions" />
               <ChurchTransactions donations={demoDonations} funds={demoFunds} />
             </section>
 
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="campaigns">
               <SectionHeader
-                action={<button className="cursor-not-allowed text-[10px] font-bold text-[var(--muted)] opacity-70" disabled title="Campaign management is coming soon">+ New campaign · Coming soon</button>}
+                action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/campaigns">Manage campaigns →</Link>}
                 eyebrow="Funds & campaigns"
                 title="Active campaigns"
               />
@@ -112,7 +111,7 @@ export default function ChurchDashboardPage() {
 
           <aside className="space-y-6">
             <section className="soft-card rounded-[22px] p-5 sm:p-6" id="qr">
-              <SectionHeader eyebrow="Sunday ready" title="Giving QR code" />
+              <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/qr">Open →</Link>} eyebrow="Sunday ready" title="Giving QR code" />
               <p className="mt-2 text-xs leading-5 text-[var(--muted)]">One permanent code for your giving homepage. Download it for screens and print.</p>
               <div className="mt-5 rounded-[22px] bg-[#eeece5] p-5 text-center">
                 <GivingQr churchName={demoChurch.name} value={givingUrl} />
@@ -122,7 +121,7 @@ export default function ChurchDashboardPage() {
             </section>
 
             <section className="soft-card rounded-[22px] p-5" id="members">
-              <SectionHeader action={<span className="text-[10px] font-bold text-[var(--muted)]">2 active</span>} title="Recurring members" />
+              <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/members">View members →</Link>} title="Recurring members" />
               <div className="mt-4 divide-y divide-[var(--line)]">
                 {demoRecurringGifts.map((gift) => {
                   const member = demoMembers.find((item) => item.id === gift.memberId);
@@ -141,6 +140,7 @@ export default function ChurchDashboardPage() {
               <div className="flex items-center gap-3"><span className="grid size-10 place-items-center rounded-2xl bg-white/[0.08] text-[#b9d7cb]"><SettingsIcon size={19} /></span><div><p className="text-xs font-bold">Payment connection</p><p className="mt-1 text-[9px] text-white/45">Pilot adapter</p></div></div>
               <div className="mt-5 flex items-center justify-between rounded-2xl bg-white/[0.06] p-3"><div><p className="text-[9px] uppercase tracking-wider text-white/45">Current mode</p><p className="mt-1 text-[10px] font-bold">Mock · no live settlement</p></div><span className="size-2 rounded-full bg-[var(--gold)]" /></div>
               <p className="mt-4 text-[9px] leading-4 text-white/45">Live gateway activation remains locked until the approved Barbados provider and sandbox credentials are supplied.</p>
+              <Link className="mt-4 inline-flex text-[10px] font-bold text-[#b9d7cb]" href="/church/settings">Open settings →</Link>
             </section>
 
             <section className="soft-card rounded-[22px] p-5">
@@ -151,7 +151,6 @@ export default function ChurchDashboardPage() {
             </section>
           </aside>
         </div>
-      </div>
-    </DashboardShell>
+    </div>
   );
 }

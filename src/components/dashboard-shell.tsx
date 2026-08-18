@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Brand, ChurchMark } from "@/components/brand";
@@ -19,12 +19,12 @@ const navByKind = {
   ],
   church: [
     ["Overview", "/church", HomeIcon],
-    ["Transactions", "/church#transactions", CardIcon],
-    ["Members", "/church#members", UsersIcon],
-    ["Funds & campaigns", "/church#campaigns", HeartIcon],
-    ["Reports", "/church#reports", ChartIcon],
-    ["Giving QR", "/church#qr", QrIcon],
-    ["Settings", "/church#settings", SettingsIcon],
+    ["Transactions", "/church/transactions", CardIcon],
+    ["Members", "/church/members", UsersIcon],
+    ["Funds & campaigns", "/church/campaigns", HeartIcon],
+    ["Reports", "/church/reports", ChartIcon],
+    ["Giving QR", "/church/qr", QrIcon],
+    ["Settings", "/church/settings", SettingsIcon],
   ],
   platform: [
     ["Overview", "/platform", HomeIcon],
@@ -34,6 +34,16 @@ const navByKind = {
     ["Settings", "/platform#settings", SettingsIcon],
   ],
 } as const;
+
+const churchRouteHeaders: Readonly<Record<string, readonly [title: string, subtitle: string]>> = {
+  "/church": ["Church overview", "Harbour Grace Church · 11–17 August 2026"],
+  "/church/transactions": ["Transactions", "Search, filter and export church giving"],
+  "/church/members": ["Members", "Member activity and recurring giving"],
+  "/church/campaigns": ["Funds & campaigns", "Giving categories and campaign progress"],
+  "/church/reports": ["Reports", "Giving performance and bookkeeping"],
+  "/church/qr": ["Giving QR", "Permanent giving link for screens and print"],
+  "/church/settings": ["Settings", "Church profile, branding and payment readiness"],
+};
 
 type DashboardShellProps = {
   children: ReactNode;
@@ -45,13 +55,25 @@ type DashboardShellProps = {
 export function DashboardShell({ children, kind, title, subtitle }: DashboardShellProps) {
   const pathname = usePathname();
   const [activeHref, setActiveHref] = useState(pathname);
+  const mobileNavRef = useRef<HTMLElement>(null);
   const isPlatform = kind === "platform";
   const isMember = kind === "member";
   const userName = isPlatform ? "Noah Williams" : isMember ? "Alicia Clarke" : "Miriam Jordan";
   const role = isPlatform ? "Platform Admin" : isMember ? "Member" : "Church Owner";
   const isDemoMode = process.env.NEXT_PUBLIC_DEMO_MODE !== "false";
+  const [resolvedTitle, resolvedSubtitle] = kind === "church" ? (churchRouteHeaders[pathname] ?? [title, subtitle]) : [title, subtitle];
+
+  function isActiveNavItem(href: string) {
+    if (kind === "church") {
+      return pathname === href || (href !== "/church" && pathname.startsWith(`${href}/`));
+    }
+
+    return activeHref === href;
+  }
 
   useEffect(() => {
+    if (kind === "church") return;
+
     function syncActiveHref() {
       setActiveHref(`${window.location.pathname}${window.location.hash}`);
     }
@@ -59,7 +81,12 @@ export function DashboardShell({ children, kind, title, subtitle }: DashboardShe
     syncActiveHref();
     window.addEventListener("hashchange", syncActiveHref);
     return () => window.removeEventListener("hashchange", syncActiveHref);
-  }, [pathname]);
+  }, [kind, pathname]);
+
+  useEffect(() => {
+    const activeMobileLink = mobileNavRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    activeMobileLink?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [activeHref, pathname]);
 
   return (
     <div className="min-h-screen bg-[#f3f1eb] lg:grid lg:grid-cols-[244px_1fr]">
@@ -74,7 +101,7 @@ export function DashboardShell({ children, kind, title, subtitle }: DashboardShe
         {isPlatform && <div className="mx-2 mt-7 rounded-2xl border border-[var(--gold)]/25 bg-[var(--gold)]/10 px-3 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#e0bd7b]">Platform workspace</div>}
         <nav className="mt-7 space-y-1">
           {navByKind[kind].map(([label, href, Icon]) => (
-            <Link aria-current={activeHref === href ? "page" : undefined} className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-3 text-xs font-semibold transition ${activeHref === href ? "bg-white !text-[#122235]" : "text-white/65 hover:bg-white/[0.07] hover:text-white"}`} href={href} key={label} onClick={() => setActiveHref(href)}>
+            <Link aria-current={isActiveNavItem(href) ? "page" : undefined} className={`focus-ring flex items-center gap-3 rounded-xl px-3 py-3 text-xs font-semibold transition ${isActiveNavItem(href) ? "bg-white !text-[#122235]" : "text-white/65 hover:bg-white/[0.07] hover:text-white"}`} href={href} key={label} onClick={kind === "church" ? undefined : () => setActiveHref(href)}>
               <Icon size={18} /> {label}
             </Link>
           ))}
@@ -89,7 +116,7 @@ export function DashboardShell({ children, kind, title, subtitle }: DashboardShe
         <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[#f3f1eb]/90 backdrop-blur-xl">
           <div className="flex h-17 items-center justify-between px-4 sm:px-7 lg:px-9">
             <div className="flex items-center gap-3 lg:hidden"><Brand compact /><p className="text-xs font-bold">{kind === "platform" ? "Platform" : kind === "church" ? "Church" : "My giving"}</p></div>
-            <div className="hidden lg:block"><h1 className="text-base font-bold tracking-tight">{title}</h1><p className="mt-0.5 text-[10px] text-[var(--muted)]">{subtitle}</p></div>
+            <div className="hidden lg:block"><h1 className="text-base font-bold tracking-tight">{resolvedTitle}</h1><p className="mt-0.5 text-[10px] text-[var(--muted)]">{resolvedSubtitle}</p></div>
             <div className="flex items-center gap-2">
               {isDemoMode && <span className="inline-flex rounded-full bg-[var(--gold-pale)] px-2.5 py-2 text-[9px] font-bold uppercase tracking-[0.1em] text-[#8b621f] sm:px-3"><span className="sm:hidden">Demo</span><span className="hidden sm:inline">Demo workspace</span></span>}
               {isDemoMode && <Link className="focus-ring hidden rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[10px] font-bold text-[var(--ink-soft)] md:block" href={kind === "member" ? "/church" : kind === "church" ? "/platform" : "/dashboard"}>Switch demo role</Link>}
@@ -99,8 +126,8 @@ export function DashboardShell({ children, kind, title, subtitle }: DashboardShe
           </div>
         </header>
         <div className="px-4 py-6 sm:px-7 lg:px-9 lg:py-8">{children}</div>
-        <nav aria-label="Dashboard sections" className="fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t border-[var(--line)] bg-white px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 lg:hidden">
-          {navByKind[kind].map(([label, href, Icon]) => <Link aria-current={activeHref === href ? "page" : undefined} className={`flex min-h-14 min-w-[86px] flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2.5 text-[10px] font-semibold ${activeHref === href ? "text-[var(--sage)]" : "text-[var(--muted)]"}`} href={href} key={label} onClick={() => setActiveHref(href)}><Icon size={18} /><span className="max-w-20 truncate">{label}</span></Link>)}
+        <nav aria-label="Dashboard sections" className="fixed inset-x-0 bottom-0 z-40 flex overflow-x-auto border-t border-[var(--line)] bg-white px-2 pb-[max(.5rem,env(safe-area-inset-bottom))] pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden" ref={mobileNavRef}>
+          {navByKind[kind].map(([label, href, Icon]) => <Link aria-current={isActiveNavItem(href) ? "page" : undefined} className={`focus-ring flex min-h-14 min-w-[86px] flex-1 flex-col items-center justify-center gap-1 rounded-xl py-2.5 text-[10px] font-semibold ${isActiveNavItem(href) ? "text-[var(--sage)]" : "text-[var(--muted)]"}`} href={href} key={label} onClick={kind === "church" ? undefined : () => setActiveHref(href)}><Icon size={18} /><span className="max-w-20 truncate">{label}</span></Link>)}
         </nav>
       </div>
     </div>
