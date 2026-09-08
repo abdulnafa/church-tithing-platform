@@ -3,6 +3,7 @@ import Link from "next/link";
 import { SectionHeader } from "@/components/dashboard-shell";
 import { GivingQr } from "@/components/giving-qr";
 import { ArrowRightIcon, CheckIcon, QrIcon, ShieldIcon } from "@/components/icons";
+import { requireChurchPermission } from "@/lib/auth/guards";
 import { demoChurch, demoQrCode } from "@/lib";
 import { getPublicAppUrl, isLocalAppUrl } from "@/lib/public-app-url";
 
@@ -18,12 +19,13 @@ const printChecklist = [
   "Place a short giving instruction beside the QR code.",
 ] as const;
 
-export default function ChurchQrPage() {
+export default async function ChurchQrPage() {
+  const { workspace } = await requireChurchPermission("qr_read");
   const appUrl = getPublicAppUrl();
   const givingUrl = `${appUrl}/q/${demoQrCode}`;
 
   return (
-    <main className="mx-auto max-w-[1180px] pb-24">
+    <main className="mx-auto max-w-[1180px] pb-24" key={workspace.churchId}>
         <div className="mb-6 lg:hidden">
           <p className="text-xs text-[var(--muted)]">Sunday ready</p>
           <h1 className="font-display mt-1 text-3xl tracking-[-0.035em]">Giving QR</h1>

@@ -1,53 +1,74 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { Donation, GivingFund } from "@/lib";
-import { formatDate, formatGivingFrequency, formatMoney } from "@/lib";
 import { DownloadIcon, SearchIcon } from "@/components/icons";
+import type {
+  ChurchTransactionExportDetail,
+  ChurchTransactionFundOption,
+  ChurchTransactionRow,
+} from "@/lib/church-transaction-view";
+import { formatDate, formatGivingFrequency, formatMoney } from "@/lib/utils";
 
-type ChurchTransactionsProps = {
-  donations: readonly Donation[];
-  funds: readonly GivingFund[];
-};
+type ChurchTransactionsProps = Readonly<{
+  rows: readonly ChurchTransactionRow[];
+  funds: readonly ChurchTransactionFundOption[];
+}> &
+  (
+    | Readonly<{
+        canExport: false;
+        exportDetails?: never;
+      }>
+    | Readonly<{
+        canExport: true;
+        exportDetails: readonly ChurchTransactionExportDetail[];
+      }>
+  );
 
 function csvCell(value: string) {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-export function ChurchTransactions({ donations, funds }: ChurchTransactionsProps) {
+export function ChurchTransactions(props: ChurchTransactionsProps) {
+  const { funds, rows } = props;
   const [query, setQuery] = useState("");
   const [fundId, setFundId] = useState("all");
 
-  const visibleDonations = useMemo(() => {
+  const visibleRows = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
 
-    return donations.filter((donation) => {
-      const matchesFund = fundId === "all" || donation.fundId === fundId;
-      const fund = funds.find((item) => item.id === donation.fundId);
-      const searchText = `${donation.donor.name} ${donation.donor.email} ${donation.receiptNumber ?? ""} ${fund?.name ?? ""}`.toLowerCase();
+    return rows.filter((row) => {
+      const matchesFund = fundId === "all" || row.fundId === fundId;
+      const fund = funds.find((item) => item.id === row.fundId);
+      const searchText = `${row.donorName} ${row.receiptNumber ?? ""} ${fund?.name ?? ""}`.toLowerCase();
       return matchesFund && (!normalizedQuery || searchText.includes(normalizedQuery));
     });
-  }, [donations, fundId, funds, query]);
+  }, [fundId, funds, query, rows]);
 
   function downloadCsv() {
-    const rows = visibleDonations.map((donation) => {
-      const fund = funds.find((item) => item.id === donation.fundId);
+    if (!props.canExport) return;
+
+    const exportDetails = new Map(
+      props.exportDetails.map((detail) => [detail.transactionId, detail]),
+    );
+    const csvRows = visibleRows.map((row) => {
+      const fund = funds.find((item) => item.id === row.fundId);
+      const exportDetail = exportDetails.get(row.id);
       return [
-        donation.receiptNumber ?? "",
-        donation.createdAt,
-        donation.donor.name,
-        donation.donor.email,
+        row.receiptNumber ?? "",
+        row.createdAt,
+        row.donorName,
+        exportDetail?.donorEmail ?? "",
         fund?.name ?? "",
-        formatGivingFrequency(donation.frequency),
-        String(donation.amount.amountMinor / 100),
-        donation.amount.currency,
-        String(donation.processingFee.amountMinor / 100),
-        String(donation.netAmount.amountMinor / 100),
-        donation.status,
+        formatGivingFrequency(row.frequency),
+        String(row.amount.amountMinor / 100),
+        row.amount.currency,
+        String((exportDetail?.processingFee.amountMinor ?? 0) / 100),
+        String(row.netAmount.amountMinor / 100),
+        row.status,
       ].map(csvCell).join(",");
     });
     const header = ["Receipt", "Date", "Donor", "Email", "Fund", "Frequency", "Gross", "Currency", "Fee", "Net", "Status"].map(csvCell).join(",");
-    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([[header, ...csvRows].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -79,13 +100,15 @@ export function ChurchTransactions({ donations, funds }: ChurchTransactionsProps
           <option value="all">All funds</option>
           {funds.map((fund) => <option key={fund.id} value={fund.id}>{fund.name}</option>)}
         </select>
-        <button
-          className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-4 py-2.5 text-xs font-bold text-white"
-          onClick={downloadCsv}
-          type="button"
-        >
-          <DownloadIcon size={15} /> Export CSV
-        </button>
+        {props.canExport ? (
+          <button
+            className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-4 py-2.5 text-xs font-bold text-white"
+            onClick={downloadCsv}
+            type="button"
+          >
+            <DownloadIcon size={15} /> Export CSV
+          </button>
+        ) : null}
       </div>
 
       <div className="mt-4 overflow-x-auto">
@@ -102,26 +125,26 @@ export function ChurchTransactions({ donations, funds }: ChurchTransactionsProps
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--line)]">
-            {visibleDonations.map((donation) => {
-              const fund = funds.find((item) => item.id === donation.fundId);
+            {visibleRows.map((row) => {
+              const fund = funds.find((item) => item.id === row.fundId);
               return (
-                <tr className="text-xs" key={donation.id}>
+                <tr className="text-xs" key={row.id}>
                   <td className="px-2 py-3.5">
-                    <p className="font-bold">{donation.donor.name}</p>
-                    <p className="mt-1 text-[9px] text-[var(--muted)]">{donation.receiptNumber}</p>
+                    <p className="font-bold">{row.donorName}</p>
+                    <p className="mt-1 text-[9px] text-[var(--muted)]">{row.receiptNumber}</p>
                   </td>
                   <td className="px-2 py-3.5 font-semibold">{fund?.name}</td>
-                  <td className="px-2 py-3.5 text-[var(--muted)]">{formatDate(donation.createdAt)}</td>
-                  <td className="px-2 py-3.5 text-[var(--muted)]">{formatGivingFrequency(donation.frequency)}</td>
-                  <td className="px-2 py-3.5 text-right font-bold">{formatMoney(donation.amount)}</td>
-                  <td className="px-2 py-3.5 text-right text-[var(--muted)]">{formatMoney(donation.netAmount)}</td>
+                  <td className="px-2 py-3.5 text-[var(--muted)]">{formatDate(row.createdAt)}</td>
+                  <td className="px-2 py-3.5 text-[var(--muted)]">{formatGivingFrequency(row.frequency)}</td>
+                  <td className="px-2 py-3.5 text-right font-bold">{formatMoney(row.amount)}</td>
+                  <td className="px-2 py-3.5 text-right text-[var(--muted)]">{formatMoney(row.netAmount)}</td>
                   <td className="px-2 py-3.5 text-right"><span className="rounded-full bg-[var(--sage-pale)] px-2 py-1 text-[8px] font-bold uppercase text-[var(--sage-dark)]">Received</span></td>
                 </tr>
               );
             })}
           </tbody>
         </table>
-        {visibleDonations.length === 0 && <p className="py-10 text-center text-xs text-[var(--muted)]">No matching donations.</p>}
+        {visibleRows.length === 0 && <p className="py-10 text-center text-xs text-[var(--muted)]">No matching donations.</p>}
       </div>
     </div>
   );

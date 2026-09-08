@@ -1,0 +1,202 @@
+# Church Digital Tithing Platform - Project Context
+
+Last updated: 8 September 2026
+Repository: `church-tithing-platform`
+Current phase: P14 public giving data complete; P15 donor profiles and guest identity is next
+Live preview: https://church-tithing-platform-3k2j.vercel.app/
+
+This file is the single task-status record for the project. Read it before starting work and update it whenever a task starts, completes, becomes blocked, or changes scope. The workflow rules are in `rules.md`.
+
+## Status legend
+
+- `[COMPLETE]` Implemented and verified at the scope written on that line.
+- `[IN PROGRESS]` The one task currently being implemented.
+- `[PENDING]` Not implemented yet, or waiting for a required client/service decision.
+
+A preview screen, mock adapter, SQL file, or interface contract is not the same as a working production feature. Status descriptions must state the exact completed scope.
+
+## Confirmed product direction
+
+- Multi-church, mobile-first SaaS for QR-based tithes, offerings, campaigns, and recurring giving.
+- First market: Barbados.
+- Church subscription: USD 99 per month through the platform owner's Canadian Stripe account.
+- Church donations: processed through each church's own approved Barbados merchant/payment account and settled directly to that church.
+- The platform must never hold, pool, withdraw, or redistribute donation funds.
+- No raw card number, CVC, bank credential, or unencrypted provider secret may be stored by the application.
+- English-only responsive web application for v1; no native mobile app.
+- Final product name, logo, colours, domain, and reference branding are still pending. `Kindred Giving` is placeholder branding.
+
+## Confirmed communication preference
+
+- `[COMPLETE]` On 4 September 2026, the user confirmed that every client-facing project update must be delivered as one properly formatted, WhatsApp-ready plain-text message that can be copied directly, uses plain URLs, clearly distinguishes completed and pending work, and contains no surrounding assistant commentary.
+
+## Current delivery target
+
+- `[COMPLETE]` On 8 September 2026, P14 was completed and verified. Phase 3 is now underway, with P15 donor profiles and guest identity as the next pending roadmap task.
+
+## Verified current baseline
+
+- `[COMPLETE]` On 4 September 2026, `project_context.md` and `rules.md` were created, linked from `AGENTS.md`, and validated with `git diff --check`.
+- `[COMPLETE]` GitHub repository exists and the preview is deployed on Vercel.
+- `[COMPLETE]` On 4 September 2026, `npm run lint` passed with no ESLint errors.
+- `[COMPLETE]` On 4 September 2026, `npm run build` passed with TypeScript validation and all 16 application routes generated successfully.
+- `[COMPLETE]` On 4 September 2026, the local Supabase client foundation passed 21 focused tests across configuration and browser/server factories; ESLint and the 16-route production build also passed.
+- `[COMPLETE]` On 4 September 2026, the complete initial migration executed successfully in test-only PGlite PostgreSQL and passed 13 runtime database tests; 10 static migration-contract tests also passed.
+- `[COMPLETE]` On 4 September 2026, the full automated suite passed 44 tests across 5 files, ESLint passed, and the production build generated all 16 application routes.
+- `[COMPLETE]` On 4 September 2026, the exact 51-assertion pgTAP suite under `supabase/tests` passed against the linked hosted PostgreSQL database with no finish diagnostics; the transaction rolled back and left zero church or audit-event fixtures. The standard container-backed `supabase test db` runner remains unavailable on this workstation because Docker is not installed, so the same committed SQL was executed directly through the linked hosted database connection.
+- `[COMPLETE]` On 4 September 2026, the reviewed migration was dry-run and then applied to the dedicated `Church Tithing Development` Supabase project in `us-east-1`; remote migration history matches the local migration, hosted database lint found no schema errors, PostgreSQL 17.6 reports 20 application tables with RLS enabled on all 20, and authoritative TypeScript database types were generated from that hosted schema.
+- `[COMPLETE]` On 4 September 2026, hosted Supabase REST and Auth health checks both returned HTTP 200, the fresh `churches` query returned an empty result as expected, and `.env.local` was configured with only the public project URL and publishable key while remaining excluded from Git.
+- `[COMPLETE]` On 5 September 2026, the deterministic development seed passed a rollback-only hosted preflight, was applied twice to prove idempotency, and produced exactly 2 synthetic churches, 6 funds, 2 campaigns, 7 donors, 2 mock connections, 2 recurring gifts, 7 donations, 7 receipts, 2 subscriptions, and 2 permanent QR records. Harbour Grace totals are BBD 127,500 gross, 4,020 fees, and 123,480 net in minor units; both tenants retain exactly one active default fund and one QR. No Auth users, memberships, profiles, prayer requests, audit events, webhooks, email events, or provider references were seeded, and all donor contact data uses reserved synthetic values.
+- `[COMPLETE]` On 5 September 2026, P03 verification passed 36/36 focused database tests and 57/57 full automated tests, ESLint, the 16-route production build, and `git diff --check`. Vitest now runs the in-memory PostgreSQL suites serially in its thread pool to avoid intermittent Windows/Node worker-memory failures without reducing coverage.
+- `[COMPLETE]` On 5 September 2026, P04 added a separate active-profile authorization migration plus real-query isolation coverage for two churches, staff roles, donors, revoked memberships, disabled profiles, anonymous public access, and prohibited client mutations. The migration was the only pending change in the reviewed hosted dry run, was applied to the dedicated development project, passed hosted database lint, and passed all 50 pgTAP assertions inside a rollback transaction with zero Auth, church, or audit fixtures left behind. Authoritative database types were regenerated, focused P04 tests passed 15/15, the full suite passed 72/72, ESLint passed, the production build generated all 16 routes, and `git diff --check` passed.
+- `[COMPLETE]` On 5 September 2026, P05 replaced the demo role login with real Supabase email/password authentication, verified-email enforcement, recovery/password-update actions, request-scoped sessions, local-session sign-out, safe redirect handling, and Next.js 16 cookie refresh. The hosted development Auth policy was narrowed to the approved production/local callback URLs, public signup was locked, the password minimum was raised to 8, and password-change reauthentication was enabled without changing SMTP or unrelated session settings. A disposable hosted user proved unverified-login rejection, token confirmation, profile provisioning, session refresh, recovery, password change, old/new password behavior, and local sign-out; the user and all related rows were then removed and zero cleanup residue was verified. Browser QA passed on desktop and 390px mobile with no console errors or overflow; the final suite passed 135/135 tests, ESLint, the 20-route production build, and `git diff --check`.
+- `[COMPLETE]` On 5 September 2026, P06 added request-scoped identity/workspace resolution plus authoritative leaf-level server guards for every member, church, workspace-selector, and Platform Admin route. Workspace cookies are treated only as revalidated preferences; exact safe return paths are preserved, framework transport parameters are removed, public routes remain available during Auth outages, and protected routes fail closed. A hosted synthetic browser matrix verified anonymous redirects, owner/member/platform separation, two-church selection, tampered-cookie rejection, inactive/missing-profile/no-access states, sign-out, live identity display, and 390px mobile rendering with zero browser errors. All seven temporary Auth users and the synthetic donor were removed and zero residue was confirmed. The final suite passed 236/236 tests, ESLint, the 24-route production build, and browser QA. Protected pages still display clearly labelled shared demo figures; tenant-scoped persisted content replacement remains P14 and later data tasks.
+- `[COMPLETE]` On 5 September 2026, P07 added 20 named church permissions with a conservative fail-closed role mapping, permission-aware RLS, server leaf guards, navigation, overview/widget visibility, prayer-data isolation, and minimum client DTOs. Generic staff receive no financial, member, prayer, settings, billing, provider, or audit access; unapproved sensitive mutations and platform-wide audit reading remain closed. The append-only audit foundation now uses finite action/entity catalogs, action-specific payload allow-lists, authenticated human-actor provenance, immutable actor snapshots, secret/card-pattern rejection, and closed direct insert/sequence privileges. The single reviewed migration was dry-run and applied to the dedicated hosted development project with no seed or role changes; migration history matched, hosted lint found zero schema errors, the rollback-only hosted pgTAP suite passed 99/99 with zero Auth/church/audit residue, and authoritative database types were regenerated. Final verification passed 301/301 tests, 68/68 database tests, TypeScript, ESLint, and the 24-route production build.
+- `[COMPLETE]` On 5 September 2026, P08 replaced the local-only onboarding preview with an authenticated, Super-Admin-only, idempotent database transaction that creates an onboarding church, active or invited owner membership, trigger-owned default Tithes fund, one permanent QR record, a private append-only request ledger, and one sanitized typed audit event. Legal/support identity, supported currency, IANA timezone, colour, naming, email, slug, and thank-you limits are validated independently in the app and database; duplicate/ambiguous retries cannot create a second tenant, and failures roll back every child record. The single reviewed migration was dry-run and applied with no seed or role changes, hosted history matched, lint found zero schema errors, the rollback-only hosted pgTAP suite passed 68/68, and authoritative database types replaced the temporary RPC cast. A temporary authenticated PostgREST test created only the expected synthetic onboarding records; because the hosted REST layer did not advertise rollback-preference support, that exact fixture was removed through a guarded cleanup transaction and zero Auth/church/ledger/audit residue was independently confirmed. Final verification passed 396/396 tests, 85/85 database tests, TypeScript, ESLint, the 24-route production build, `git diff --check`, and the temporary-artifact audit.
+- `[COMPLETE]` On 5 September 2026, P09 replaced the demo Church Settings screen with owner-authorized, tenant-scoped profile and branding management for display/legal name, support email, IANA timezone, colours, thank-you text, and logo replacement/removal. Settings updates use an aggregate revision, idempotent request ledger, database-derived field-name-only audit event, exact permission checks, and durable old-logo cleanup. PNG/JPEG/WebP input is decoded server-side, bounded, stripped, and stored only as sanitized WebP; the public bucket enforces exact tenant/request paths, MIME, size, no-upsert, active-reference deletion protection, and tenant-isolated writes/lists. The reviewed migration was applied to the dedicated hosted project, history matched, hosted lint had zero errors, the rollback-only pgTAP suite passed 65/65 with zero residue, authoritative types were regenerated, and the real Storage API matrix passed 11/11 with zero Auth/church/fund/QR/membership/audit/ledger/object residue. Final verification passed 521/521 tests, 107/107 database tests, TypeScript, ESLint, the 24-route production build, `git diff --check`, and an HTTP production-server guard check for `/church/settings`; the unavailable optional browser driver did not leave any process or file artifact.
+- `[COMPLETE]` On 5 September 2026, P10 replaced the demo category grid with tenant-scoped persisted fund management. Owners can create categories with an automatically derived stable internal slug, edit names/descriptions, choose the future default, move active funds one position at a time, archive safe funds, and restore archived funds at the end; other permitted staff receive a read-only view. Every mutation independently rechecks `funds_manage`, uses aggregate optimistic concurrency plus exact idempotent replay, records an identifier-only audit event, and preserves historical donation/recurring attribution. The database blocks duplicate names/slugs, default-fund removal, open-campaign archives, and nonterminal-recurring archives. Migration 005 was applied alone to the dedicated hosted project with matching history and zero lint errors; the rollback-only pgTAP suite passed 77/77 with zero fixture residue, and authoritative types replaced the temporary RPC bridge. Final verification passed 614/614 tests, 135/135 database tests, TypeScript, ESLint, the 24-route production build, `git diff --check`, and the temporary-artifact audit.
+- `[COMPLETE]` On 5 September 2026, P11 replaced the campaign preview with tenant-scoped persisted campaign management. Owners can create and edit drafts, set an informational goal, activate, manually close, archive, and restore archived campaigns to closed status; fund, currency, route, image, and legacy date attribution remain immutable, and historical donations/recurring gifts are never rewritten. Confirmed online progress is isolated behind both campaign and financial permissions and excludes fees, offline gifts, pending/failed/disputed payments, and fully refunded value. Migration 006 was applied alone with matching hosted history and zero lint errors; the rollback-only hosted pgTAP suite passed 88/88 with zero fixture residue, authoritative UTF-8 types were regenerated, and live anonymous calls to all three campaign RPC boundaries were denied without financial leakage. Final verification passed 737/737 tests, 166/166 database tests, TypeScript, ESLint, the 24-route production build, `git diff --check`, and the temporary-artifact audit. A disposable authenticated hosted wire fixture was not created because the environment required separate approval for that live test mutation; its role/browser matrix remains part of final P35 acceptance rather than being represented as executed.
+- `[COMPLETE]` On 7 September 2026, P12 replaced the staff preview with an owner-authorized, tenant-scoped roster and audited invitation, role-change, removal, and exact verified-email acceptance foundations. Invitations are privacy-neutral pending reservations: they never probe or expose whether another account exists, never create an Auth account, and never claim that an email was sent. Managed mutations use aggregate revision checks, exact idempotent replay, owner/self protection, identifier-and-role-only audits, a private identity-snapshot ledger, and revocation instead of deletion. Direct membership reads are now self-only, owner roster data is a minimum RPC projection with no user UUIDs, and Auth deletion is deliberately blocked while linked history exists until an approved unlink/ownership-transfer workflow is added. Migrations 007 and 008 were the only hosted changes, history matched, hosted lint found zero errors, the rollback-only pgTAP suite passed 77/77 with zero Auth/church/membership/audit/ledger residue, and authoritative UTF-8 types replaced the temporary RPC bridge. Verification passed 858/858 application tests, 202/202 database tests, 111/111 focused P12 tests after type reconciliation, TypeScript, ESLint, the 24-route production build, and `git diff --check`. Transactional invitation delivery and account creation remain assigned to P28; the conservative email-change/unlink flow and authenticated browser role matrix remain later acceptance work rather than being represented as complete.
+- `[COMPLETE]` On 7 September 2026, P13 replaced the Platform Admin tenant preview with a real identity-minimized tenant list, readiness checks, activation, administrative suspension, restoration, and persisted future-onboarding defaults. Activation and restoration require an active owner, valid church profile, active default fund, and permanent QR; colours and logos remain optional. Tenant lifecycle changes and defaults updates use independent revisions, exact idempotent replay, private append-only ledgers, and sanitized audits. Broad provisional Platform Admin reads of tenant financial/provider/subscription data were removed, while direct admin identity reads are self-only and column-minimized. Migration 009 was applied alone to the dedicated development project, history matched, hosted lint found zero errors, all hosted rollback suites 001–009 passed 683/683 assertions (including P13 at 106/106), no synthetic fixture residue remained, and the real defaults singleton remained at revision 0. Authoritative UTF-8 types replaced the temporary RPC bridge. Final verification passed 1001/1001 tests in the full automated suite, 234/234 focused database tests, TypeScript, ESLint, the 25-route production build, and `git diff --check`. An `active` church means its database/public workspace state is enabled; it does not claim that billing, provider onboarding, live giving, or production email is enabled.
+- `[COMPLETE]` On 8 September 2026, P14 replaced the seeded public-giving church, fund, and campaign content with a request-time, tenant-scoped, deliberately session-free public database boundary. The page exposes only approved active church identity, safe optional branding, active funds, and currently eligible campaigns; direct anonymous church/fund/campaign/QR table enumeration is closed, inactive or unavailable tenants fail closed, and donor, prayer, payment, progress, provider, subscription, legal, and support data are not exposed. Visitors can review giving targets, amounts, and intended frequency, but no personal or payment data is collected and checkout remains disabled. Migration 010 was applied alone to the dedicated development project, history matched, hosted lint found zero errors, the P14 rollback suite passed 84/84, and all hosted rollback suites 001–010 passed 767/767 with zero fixture residue. Live REST checks confirmed the zero-or-one array contract and denied direct anonymous table reads; authoritative UTF-8 types replaced all temporary RPC bridges. Final verification passed 1075/1075 application tests, 259/259 database tests, TypeScript, ESLint, the dynamic production build, `git diff --check`, desktop 1440×900 and mobile 390×844 Chrome QA, interaction, not-found, console, and overflow checks. All QA processes and temporary artifacts were removed.
+- `[COMPLETE]` Tenant settings, funds, campaigns, staff, platform management, and the public giving configuration now use persisted development data. Remaining dashboard financial figures are explicitly labelled shared examples; live payments and production email delivery are not enabled.
+
+## Completed work - product and preview foundation
+
+### Documentation and architecture
+
+- `[COMPLETE]` Baseline product scope is documented in `docs/PROJECT_BRIEF.md`.
+- `[COMPLETE]` Technical architecture and delivery sequence are documented in `docs/ARCHITECTURE.md`.
+- `[COMPLETE]` Client decisions, assumptions, and release blockers are documented in `docs/OPEN_ITEMS.md`.
+- `[COMPLETE]` Environment-variable groups and setup guidance are documented in `.env.example` and `README.md`.
+
+### Application and public website preview
+
+- `[COMPLETE]` Next.js App Router, React, TypeScript, and Tailwind application foundation is configured.
+- `[COMPLETE]` Responsive public marketing website preview is available at `/`.
+- `[COMPLETE]` Shared responsive dashboard shell, desktop sidebar, and mobile navigation are implemented; the former demo-role switcher has been removed from authenticated screens.
+- `[COMPLETE]` Mobile and desktop navigation open dedicated routes instead of scrolling to overview sections.
+- `[COMPLETE]` Preview deployment uses route-specific page titles and renders without the previously identified hydration/navigation issues.
+
+### Church Admin preview
+
+- `[COMPLETE]` Church overview at `/church` retains all key summary widgets.
+- `[COMPLETE]` Dedicated Transactions page exists at `/church/transactions`.
+- `[COMPLETE]` Dedicated Members page exists at `/church/members`.
+- `[COMPLETE]` Dedicated Funds & Campaigns page exists at `/church/campaigns`.
+- `[COMPLETE]` Dedicated Reports page exists at `/church/reports`.
+- `[COMPLETE]` Dedicated Giving QR page exists at `/church/qr`.
+- `[COMPLETE]` Dedicated Settings page exists at `/church/settings`.
+- `[COMPLETE]` Demo transaction search and fund filtering work in the browser.
+- `[COMPLETE]` Demo transaction CSV export works in the browser.
+- `[COMPLETE]` Demo report calculations and report CSV download are implemented.
+
+### Donor/member and giving preview
+
+- `[COMPLETE]` Public giving-page preview exists at `/give/harbour-grace`.
+- `[COMPLETE]` The public giving UI uses tenant-scoped persisted church, fund, and campaign configuration and supports target selection, amount entry, and one-time/weekly/monthly intent without collecting donor, message, prayer-request, card, bank, or other payment information.
+- `[COMPLETE]` Online payment submission remains disabled until the approved donor, consent, and payment flows are implemented in P15, P16, and P18.
+- `[COMPLETE]` Member portal preview exists at `/dashboard` with seeded giving history, recurring summary, safe card-display metadata, annual-statement section, and profile section.
+- `[COMPLETE]` Real accessible email/password sign-in, forgot-password, recovery callback, reset-password, auth-error, session refresh, and sign-out flows are implemented; the former demo credentials and client-side role selector are removed.
+
+### Platform Admin and onboarding preview
+
+- `[COMPLETE]` Platform Admin preview exists at `/platform`.
+- `[COMPLETE]` Persisted manual church onboarding exists at `/platform/onboarding` with independent page/action/database Super Admin authorization, accessible validation and retry states, and safe success/error responses.
+- `[COMPLETE]` Onboarding atomically creates the church, owner membership reservation, default Tithes fund, permanent QR record, private idempotency ledger, and sanitized audit event while explicitly leaving logo, invitation delivery, billing, payment-provider setup, and public QR resolution to their later tasks.
+
+### QR, domain model, and payment foundation
+
+- `[COMPLETE]` One-church demo QR can be generated and downloaded as SVG.
+- `[COMPLETE]` Stable demo resolver `/q/hgc-7v2q9mx4` redirects to the Harbour Grace giving page.
+- `[COMPLETE]` Canonical TypeScript domain types and seeded demo data are implemented under `src/lib`.
+- `[COMPLETE]` Provider-neutral `DonationPaymentProvider` contract is authored.
+- `[COMPLETE]` In-memory mock payment-provider library is authored with checkout idempotency, recurring-plan controls, and mock webhook-signature handling; it is not yet connected to the web application.
+- `[COMPLETE]` Initial Supabase SQL migration is authored, security-reviewed, hardened, executed in the test-only PostgreSQL runtime, applied to the dedicated hosted development project, and verified with tenant tables, financial records, constraints, conservative RLS/privileges, stable-QR/default-fund provisioning, webhook routing protection, email events, and append-only audit protection.
+
+## Pending implementation roadmap - execute one task at a time
+
+### Phase 1 - Supabase, authentication, and authorization
+
+- `[COMPLETE]` P01 - Install the current Supabase browser/SSR SDKs and add a tested browser client factory plus a request-scoped server client factory with strict public environment validation and client/server boundaries. The supported Node.js 22.12.x, 24.x, or 26+ runtime range is enforced, and P02 has now replaced the temporary schema placeholder with authoritative hosted database types.
+- `[COMPLETE]` P02 - Pin and initialize Supabase tooling; security-review and runtime-test the migration; create and link the dedicated `Church Tithing Development` project without changing the two pre-existing projects; review the one-file/no-seed/no-role dry run; apply the migration; pass hosted lint and the 51-assertion hosted pgTAP suite; confirm 20 RLS-protected application tables and zero persisted test fixtures; generate authoritative types; and pass hosted REST/Auth connection checks. Final verification on 4 September 2026: database tests 23/23, full suite 44/44, ESLint, production build, and `git diff --check` all passed.
+- `[COMPLETE]` P03 - Added a repeatable, deterministic development seed with two isolated synthetic tenants, trigger-created default funds and permanent QR records, mock provider metadata, funds, campaigns, donors, recurring gifts, donations, matching receipts, and incomplete USD 99 test subscriptions. The seed contains no production secrets, real identities, Auth accounts, memberships, prayer text, provider credentials, or operational event data; it validates canonical snapshots, fails on drift, and is verified locally and on the dedicated hosted development project.
+- `[COMPLETE]` P04 - Added and hosted-verified automated RLS tests proving cross-tenant isolation and least privilege for owners, finance administrators, accountants, staff, donors, platform roles, anonymous users, revoked memberships, and disabled profiles. A follow-up migration now makes every tenant/platform authorization helper fail closed when an application profile is inactive, without modifying the already-applied foundation migration.
+- `[COMPLETE]` P05 - Replaced demo login with Supabase email/password authentication, email verification, password reset, sessions, and sign-out. Local token-hash email templates are committed, but the free hosted development tier rejected custom template deployment while using its default email provider; branded template delivery, scanner-resistant confirmation UX, custom SMTP, and real inbox deliverability remain explicitly assigned to P28/P35 rather than being falsely claimed here.
+- `[COMPLETE]` P06 - Protect member, church, and platform routes with request-scoped identity resolution, database-revalidated workspace selection, and server-side tenant/role checks at both layout and leaf/data boundaries.
+- `[COMPLETE]` P07 - Implemented and hosted-verified a conservative least-privilege church staff permission matrix plus the database/application audit foundation for sensitive actions. Final expansion of role abilities remains gated on client approval of the detailed matrix; unapproved access stays denied.
+
+### Phase 2 - Persisted church and platform management
+
+- `[COMPLETE]` P08 - Persisted and hosted-verified Super Admin church provisioning atomically: church, owner membership, default Tithes fund, stable QR record, idempotency ledger, and sanitized audit event.
+- `[COMPLETE]` P09 - Implemented and hosted-verified Church Admin profile, branding, thank-you-message, timezone, and validated logo upload.
+- `[COMPLETE]` P10 - Implemented and hosted-verified fund/category create, edit, default selection, ordering, archive, and restore workflows. Conservative v1 rules are owner-only mutations; automatically derived immutable internal slugs; active-only move-up/move-down ordering; restore appends; default changes affect future preselection only; and archive is blocked for the default fund, open campaigns, or nonterminal recurring gifts.
+- `[COMPLETE]` P11 - Implemented tenant-scoped campaign create, draft edit, informational goal/confirmed-online progress, activate, manual close, archive, and conservative restore-to-closed workflows with immutable routing/history and hosted verification.
+- `[COMPLETE]` P12 - Implemented and hosted-verified privacy-neutral pending staff invitations, owner-only role changes and access removal, a minimum tenant roster, self-only direct membership reads, verified-email acceptance foundation, immutable audit/history controls, and conservative owner/self/account-deletion protections. Transactional invite delivery and account creation remain P28.
+- `[COMPLETE]` P13 - Implemented and hosted-verified the real Platform Admin tenant list, derived onboarding readiness, activation, neutral administrative suspension, restoration, and persisted future-onboarding defaults without exposing tenant identity, payment, provider, or subscription details beyond the approved minimum projection.
+
+### Phase 3 - Real data in giving and member experiences
+
+- `[COMPLETE]` P14 - Replaced seeded church/fund/campaign data on the public giving page with tenant-scoped request-time database queries through a deliberately session-free public client and minimum anonymous RPC projections, so logged-in donor sessions cannot bypass the anonymous public-giving policies.
+- `[PENDING]` P15 - Implement donor profiles, required guest fields, account updates, and the approved guest-to-member linking policy.
+- `[PENDING]` P16 - Store prayer requests separately from accounting data with consent, restricted access, retention rules, and audit coverage.
+- `[PENDING]` P17 - Make QR resolution database-backed and add the approved subdomain/slug-routing strategy.
+- `[PENDING]` P18 - Connect the mock provider to an end-to-end server giving flow: validation, pending donation, idempotency, hosted-checkout simulation, return flow, and signed webhook.
+- `[PENDING]` P19 - Persist and deduplicate webhook events; make webhook-driven state transitions transaction-safe and replay-tested.
+
+### Phase 4 - Church operations, donor tools, and reporting
+
+- `[PENDING]` P20 - Replace demo transaction data with server-paginated records and full filters for date, donor, amount, category, recurring state, card last four, payment status, and cancellation state.
+- `[PENDING]` P21 - Move CSV/report generation to permission-checked server code using real data.
+- `[PENDING]` P22 - Implement weekly, monthly, yearly, and full-history reports with accurate gross, fee, net, and currency handling.
+- `[PENDING]` P23 - Implement donor recurring-gift pause, resume, amount/category/payment-method change, and cancellation through provider capability checks.
+- `[PENDING]` P24 - Implement tokenized saved-payment-method viewing and management when supported by the selected gateway.
+- `[PENDING]` P25 - Generate immutable donation receipts, downloadable files, and receipt records after confirmed successful payments.
+- `[PENDING]` P26 - Implement draft, review, publish, correction/version, and download workflow for annual statements.
+- `[PENDING]` P27 - Decide and implement controlled cash/cheque entry if the client includes it in the pilot.
+
+### Phase 5 - External integrations
+
+- `[PENDING]` P28 - Select Resend or SendGrid, configure a verified sending domain, and implement receipt, recurring-created, recurring-cancelled, payment-failed, staff-invite, subscription-failure, and statement-available emails.
+- `[PENDING]` P29 - Implement Canadian Stripe test-mode billing for the USD 99 church SaaS subscription using hosted payment collection and signed webhooks.
+- `[PENDING]` P30 - Implement church subscription retry, grace-period, suspension, and donor-facing unavailable-page policy after client approval.
+- `[PENDING]` P31 - Select and validate the Barbados donation gateway, API documentation, merchant approval, direct settlement, recurring capabilities, webhooks, retries, fees, and sandbox credentials.
+- `[PENDING]` P32 - Implement the approved Barbados gateway adapter and complete sandbox one-time, recurring, failure, retry, cancellation, reconciliation, and webhook tests.
+
+### Phase 6 - Hardening and launch
+
+- `[PENDING]` P33 - Add unit, integration, RLS, webhook replay/idempotency, and end-to-end tests for critical financial and authorization flows.
+- `[PENDING]` P34 - Add structured logging, error monitoring, rate limiting, secure upload rules, reconciliation tooling, backup, and tested recovery procedures. Include cleanup for abandoned pre-commit logo objects after a user closes an ambiguous retry, and evaluate privileged server-side upload attestation if the threat model must prevent authorized owners from bypassing application image decoding through direct Storage API calls.
+- `[PENDING]` P35 - Complete accessibility, responsive-browser, performance, email-deliverability, and security review.
+- `[PENDING]` P36 - Apply final product identity, logo, colour palette, primary domain, and subdomain DNS.
+- `[PENDING]` P37 - Obtain approved Privacy Policy, Terms of Service, prayer-request consent, refund/chargeback process, data-retention policy, and Barbados receipt/statement/reporting requirements.
+- `[PENDING]` P38 - Provision the confirmed pilot church and execute sandbox acceptance testing with client sign-off.
+- `[PENDING]` P39 - Separate Preview and Production secrets, complete production smoke tests, approve the go/no-go checklist, and launch the controlled pilot.
+
+## Client inputs still required
+
+- `[COMPLETE]` On 4 September 2026, the user authorized and the project received a dedicated `Church Tithing Development` Supabase project in `us-east-1` using the default development capacity; the two existing projects were left untouched, and no secret or service-role key was sent in chat or committed to Git.
+- `[PENDING]` Pilot church legal/display name, contact, default currency, timezone, initial funds/campaign, merchant status, and branding.
+- `[PENDING]` Approved Barbados donation provider, API documentation, technical contact, sandbox account, and production approval path.
+- `[PENDING]` Canadian Stripe business/account readiness, billing details, test keys, and final confirmation of USD 99 monthly pricing.
+- `[PENDING]` Staff roles and detailed permission matrix.
+- `[PENDING]` Guest identity/linking, recurring-edit/retry, campaign, annual-statement, manual cash/cheque, subscription-failure, and Super Admin authority decisions listed in `docs/OPEN_ITEMS.md`.
+- `[PENDING]` Transactional email provider, sending domain, from/reply-to policy, and recipients.
+- `[PENDING]` Final name, tagline, logo, colours, domain, and design revisions.
+- `[PENDING]` Legal, privacy, consent, refund/dispute, retention, accounting, and Barbados reporting approvals.
+
+## Confirmed out of scope for v1
+
+- Free trial.
+- ACH/bank transfer and text-to-give.
+- Platform custody of donation money, internal church balances, or withdrawal requests.
+- Split donations and memorial/honor giving.
+- Custom-designed/service-specific QR codes and custom church domains.
+- Multilingual UI, native mobile app, and two-factor authentication.
+- Automatic annual-statement sending.
+- In-platform refund button and support chat/ticketing.
+- Advanced accounting integrations unless separately approved.
+
+## Next task
+
+`P15 - Donor profiles, guest fields, and guest-to-member linking` is `[PENDING]`. Define and implement the minimum donor identity fields, authenticated profile updates, guest-giving requirements, and the approved privacy-preserving guest-to-member linking policy without enabling payment submission prematurely.

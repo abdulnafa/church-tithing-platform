@@ -1,53 +1,96 @@
 "use client";
 
-import type { FormEvent } from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { ArrowRightIcon, HeartIcon, ShieldIcon, UsersIcon } from "@/components/icons";
+import { useActionState } from "react";
+import Link from "next/link";
 
-type DemoRole = "member" | "church" | "platform";
+import {
+  signInAction,
+  type AuthActionState,
+} from "@/app/auth/actions";
+import { ArrowRightIcon } from "@/components/icons";
 
-const roles = [
-  { id: "member", label: "Member", route: "/dashboard", icon: HeartIcon },
-  { id: "church", label: "Church admin", route: "/church", icon: UsersIcon },
-  { id: "platform", label: "Platform admin", route: "/platform", icon: ShieldIcon },
-] as const;
+const INITIAL_STATE: AuthActionState = { status: "idle", message: "" };
 
-export function LoginForm() {
-  const router = useRouter();
-  const [role, setRole] = useState<DemoRole>("member");
-  const route = roles.find((item) => item.id === role)?.route ?? "/dashboard";
+type LoginFormProps = Readonly<{
+  nextPath: string | null;
+  notice?: string;
+}>;
 
-  function signIn(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    router.push(route);
-  }
+export function LoginForm({ nextPath, notice }: LoginFormProps) {
+  const [state, formAction, isPending] = useActionState(
+    signInAction,
+    INITIAL_STATE,
+  );
 
   return (
-    <form className="mt-7" onSubmit={signIn}>
-      <fieldset>
-        <legend className="mb-2 text-xs font-bold text-[var(--ink-soft)]">Preview as</legend>
-        <div className="grid grid-cols-3 gap-2">
-          {roles.map(({ id, icon: Icon, label }) => (
-            <label className={`focus-within:ring-3 focus-within:ring-[var(--sage)]/20 cursor-pointer rounded-2xl border p-3 text-center transition ${role === id ? "border-[var(--sage)] bg-[var(--sage-pale)]" : "border-[var(--line)] bg-white hover:border-[#bdc8c2]"}`} key={id}>
-              <input className="sr-only" checked={role === id} name="role" onChange={() => setRole(id)} type="radio" value={id} />
-              <Icon className={`mx-auto ${role === id ? "text-[var(--sage)]" : "text-[var(--muted)]"}`} size={18} />
-              <span className="mt-2 block text-[9px] font-bold">{label}</span>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-
+    <form action={formAction} className="mt-7">
+      {nextPath ? <input name="next" type="hidden" value={nextPath} /> : null}
+      {notice && (
+        <p
+          className="mb-5 rounded-2xl bg-[var(--sage-pale)] px-4 py-3 text-xs leading-5 text-[var(--sage-dark)]"
+          role="status"
+        >
+          {notice}
+        </p>
+      )}
+      {state.status === "error" && (
+        <p
+          className="mb-5 rounded-2xl bg-[#f5e8e5] px-4 py-3 text-xs leading-5 text-[#9b463b]"
+          role="alert"
+        >
+          {state.message}
+        </p>
+      )}
       <label className="mt-5 block">
-        <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">Email address</span>
-        <input autoComplete="username" className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]" defaultValue="alicia.clarke@example.com" name="email" required type="email" />
+        <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">
+          Email address
+        </span>
+        <input
+          aria-describedby={state.fieldErrors?.email ? "email-error" : undefined}
+          aria-invalid={Boolean(state.fieldErrors?.email)}
+          autoComplete="username"
+          className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]"
+          name="email"
+          required
+          type="email"
+        />
+        {state.fieldErrors?.email && (
+          <span className="mt-2 block text-[10px] text-[#9b463b]" id="email-error">
+            {state.fieldErrors.email}
+          </span>
+        )}
       </label>
       <label className="mt-4 block">
-        <span className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--ink-soft)]"><span>Password</span><button className="cursor-not-allowed text-[10px] text-[var(--muted)] opacity-70" disabled title="Password reset is unavailable in the demo" type="button">Reset unavailable in demo</button></span>
-        <input autoComplete="current-password" className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none" defaultValue="demo-password" minLength={8} name="password" required type="password" />
+        <span className="mb-2 flex items-center justify-between text-xs font-bold text-[var(--ink-soft)]">
+          <span>Password</span>
+          <Link className="text-[10px] text-[var(--sage)]" href="/forgot-password">
+            Forgot password?
+          </Link>
+        </span>
+        <input
+          aria-describedby={state.fieldErrors?.password ? "password-error" : undefined}
+          aria-invalid={Boolean(state.fieldErrors?.password)}
+          autoComplete="current-password"
+          className="focus-ring w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none"
+          minLength={8}
+          name="password"
+          required
+          type="password"
+        />
+        {state.fieldErrors?.password && (
+          <span className="mt-2 block text-[10px] text-[#9b463b]" id="password-error">
+            {state.fieldErrors.password}
+          </span>
+        )}
       </label>
-      <button className="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--sage)] px-5 py-4 text-sm font-bold text-white transition hover:bg-[var(--sage-dark)]" type="submit">Open {roles.find((item) => item.id === role)?.label.toLowerCase()} demo <ArrowRightIcon size={17} /></button>
-      <p className="mt-4 text-center text-[9px] leading-4 text-[var(--muted)]">Demo only. Supabase authentication will replace this preview hand-off when environment credentials are connected.</p>
+      <button
+        className="focus-ring mt-6 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[var(--sage)] px-5 py-4 text-sm font-bold text-white transition hover:bg-[var(--sage-dark)] disabled:cursor-wait disabled:opacity-65"
+        disabled={isPending}
+        type="submit"
+      >
+        {isPending ? "Signing in..." : "Sign in securely"}
+        {!isPending && <ArrowRightIcon size={17} />}
+      </button>
     </form>
   );
 }

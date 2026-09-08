@@ -55,9 +55,9 @@ This repository and its database are independent of PhotoBlocs and Real Estate S
 
 ### Prerequisites
 
-- Node.js 20 or newer
+- Node.js 22.12.x, 24.x, or 26+ (supported by the current Supabase SDK and test runner)
 - npm
-- A Supabase project when database/auth work is enabled
+- Authorized access to the dedicated Supabase development project for database/Auth work
 - Test credentials only for Stripe and the selected donation/email providers
 
 ### Setup
@@ -82,8 +82,42 @@ The application should remain usable with `DONATION_PROVIDER_DRIVER=mock` until 
 | `npm run build` | Create and validate a production build |
 | `npm run start` | Run the previously built production application |
 | `npm run lint` | Run ESLint |
+| `npm run test` | Run the focused Vitest suite once |
+| `npm run test:db` | Run the static and in-memory migration checks |
 
-No automated test command has been configured yet. Add one before relying on the pilot for financial workflows.
+## Database development
+
+The committed database checks have two layers. The migration contract suite checks
+security-sensitive SQL declarations, while the PGlite suite executes the complete
+migration in a test-only, in-memory PostgreSQL engine. PGlite provides fast local
+feedback, but it does not replace verification against Supabase's hosted PostgreSQL
+environment.
+
+The repository is linked locally to a dedicated hosted development project. On
+4 September 2026, the reviewed initial migration was dry-run, applied, and verified
+there: hosted database lint reported no schema errors, all 20 application tables have
+RLS enabled, and the exact 51-assertion pgTAP file at
+`supabase/tests/001_schema_and_provisioning.test.sql` completed with no diagnostics.
+That hosted test ran inside an explicit transaction and rolled back, leaving no test
+churches or audit events. Authoritative TypeScript types in
+`src/lib/supabase/database.types.ts` were then generated from the hosted schema.
+
+Docker is still not installed on this workstation, so the standard container-backed
+`supabase test db` command is unavailable. The same committed pgTAP SQL was therefore
+executed directly through the linked hosted database connection. Docker is also
+required for local `supabase start` and `supabase db reset` workflows.
+
+The reviewed `supabase/seed.sql` file is enabled for local resets. It creates only
+synthetic development records, uses reserved `example.test` identities, contains no
+Auth accounts or provider secrets, and can be run repeatedly. The church provisioning
+triggers remain enabled and continue to own each church's default Tithes fund and
+permanent QR record. Never run this seed against production.
+
+Never run `supabase db reset --linked`. For future schema changes, review the linked
+migration dry run before applying it. Generate database types into a temporary file,
+validate that generation succeeded and inspect the diff before replacing
+`src/lib/supabase/database.types.ts`; do not redirect a possibly failing command
+straight into that tracked file.
 
 ## Environment configuration
 
@@ -144,6 +178,7 @@ Deploy the Next.js application to a dedicated Vercel project and use a dedicated
 At minimum, run before release:
 
 ```powershell
+npm run test
 npm run lint
 npm run build
 ```

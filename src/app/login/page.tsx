@@ -1,47 +1,67 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Brand } from "@/components/brand";
+
+import { AuthPageShell } from "@/components/auth-page-shell";
 import { LoginForm } from "@/components/login-form";
-import { CheckIcon, HeartIcon, ShieldIcon } from "@/components/icons";
+import { getSafePostAuthDestination } from "@/lib/auth/redirects";
+import { getRequestIdentity } from "@/lib/auth/request-identity";
+import {
+  resolvePostAuthDestination,
+  WORKSPACE_COOKIE_NAME,
+} from "@/lib/auth/workspaces";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in to your Kindred Giving portal.",
+  description: "Sign in securely to your Kindred Giving portal.",
 };
 
-export default function LoginPage() {
-  return (
-    <main className="grid min-h-screen bg-[var(--paper)] lg:grid-cols-[.92fr_1.08fr]">
-      <section className="relative hidden overflow-hidden bg-[var(--ink)] p-12 text-white lg:flex lg:flex-col">
-        <div className="noise absolute inset-0" />
-        <div className="absolute -bottom-40 -left-24 size-[520px] rounded-full bg-[var(--sage)]/30 blur-[100px]" />
-        <div className="absolute -right-24 -top-28 size-80 rounded-full bg-[var(--gold)]/18 blur-[90px]" />
-        <div className="relative"><Brand inverted /></div>
-        <div className="relative my-auto max-w-lg py-12">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white/[0.08] text-[#b9d7cb]"><HeartIcon size={23} /></span>
-          <h1 className="font-display mt-7 text-5xl leading-[1.08] tracking-[-0.04em]">Giving that feels as welcoming as your church.</h1>
-          <p className="mt-6 max-w-md text-base leading-7 text-white/60">One secure home for donors, church teams and the people supporting every church on the platform.</p>
-          <div className="mt-9 space-y-3 text-xs text-white/65">
-            <p className="flex items-center gap-3"><CheckIcon className="text-[#9dd0bd]" size={16} /> Church-scoped member accounts</p>
-            <p className="flex items-center gap-3"><CheckIcon className="text-[#9dd0bd]" size={16} /> Role-aware staff access</p>
-            <p className="flex items-center gap-3"><CheckIcon className="text-[#9dd0bd]" size={16} /> No card details stored by the platform</p>
-          </div>
-        </div>
-        <p className="relative text-[10px] text-white/35">Kindred Giving · Barbados pilot · 2026</p>
-      </section>
+type LoginSearchParams = Promise<{
+  next?: string | string[];
+  password?: string | string[];
+}>;
 
-      <section className="flex min-h-screen items-center justify-center px-5 py-12 sm:px-8">
-        <div className="w-full max-w-md">
-          <div className="flex items-center justify-between lg:hidden"><Brand /><Link className="text-xs font-bold text-[var(--sage)]" href="/">Back home</Link></div>
-          <div className="mt-12 lg:mt-0">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--sage)]">Welcome back</p>
-            <h2 className="font-display mt-3 text-4xl tracking-[-0.04em]">Sign in to continue.</h2>
-            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Choose a role to explore the working pilot experience.</p>
-            <LoginForm />
-          </div>
-          <div className="mt-7 flex items-start gap-3 rounded-2xl bg-[var(--sage-pale)] p-4"><ShieldIcon className="mt-0.5 shrink-0 text-[var(--sage)]" size={17} /><p className="text-[10px] leading-5 text-[var(--muted)]">Production sign-in will use email and password through Supabase Auth, with tenant checks enforced on every protected action.</p></div>
-        </div>
-      </section>
-    </main>
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: LoginSearchParams;
+}) {
+  const [params, identity, cookieStore] = await Promise.all([
+    searchParams,
+    getRequestIdentity(),
+    cookies(),
+  ]);
+  const nextPath = getSafePostAuthDestination(firstValue(params.next));
+
+  if (identity.state !== "anonymous") {
+    redirect(
+      resolvePostAuthDestination(
+        identity,
+        nextPath,
+        cookieStore.get(WORKSPACE_COOKIE_NAME)?.value,
+      ),
+    );
+  }
+
+  const notice =
+    firstValue(params.password) === "updated"
+      ? "Your password has been updated. Sign in with your new password."
+      : undefined;
+
+  return (
+    <AuthPageShell
+      description="Use the verified email address and password connected to your account."
+      eyebrow="Welcome back"
+      title="Sign in to continue."
+    >
+      <LoginForm nextPath={nextPath} notice={notice} />
+      <p className="mt-6 rounded-2xl bg-[var(--sage-pale)] p-4 text-[10px] leading-5 text-[var(--muted)]">
+        Authentication sessions are handled securely by Supabase.
+      </p>
+    </AuthPageShell>
   );
 }

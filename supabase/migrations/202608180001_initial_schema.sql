@@ -111,6 +111,82 @@ begin
 end;
 $$;
 
+create or replace function public.prevent_qr_routing_change()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.church_id is distinct from old.church_id
+    or new.kind is distinct from old.kind
+    or new.fund_id is distinct from old.fund_id
+    or new.campaign_id is distinct from old.campaign_id
+    or new.short_code is distinct from old.short_code then
+    raise exception 'permanent QR routing fields cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.protect_webhook_routing()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if old.church_id is not null and new.church_id is distinct from old.church_id then
+    raise exception 'resolved webhook church_id cannot be changed';
+  end if;
+  if old.connection_id is not null and new.connection_id is distinct from old.connection_id then
+    raise exception 'resolved webhook connection_id cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.prevent_donation_snapshot_change()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $$
+begin
+  if new.id is distinct from old.id
+    or new.church_id is distinct from old.church_id
+    or new.donor_id is distinct from old.donor_id
+    or new.fund_id is distinct from old.fund_id
+    or new.campaign_id is distinct from old.campaign_id
+    or new.recurring_gift_id is distinct from old.recurring_gift_id
+    or new.payment_connection_id is distinct from old.payment_connection_id
+    or new.source is distinct from old.source
+    or new.amount_minor is distinct from old.amount_minor
+    or new.currency is distinct from old.currency
+    or new.donor_display_name is distinct from old.donor_display_name
+    or new.donor_email is distinct from old.donor_email
+    or new.donor_message is distinct from old.donor_message
+    or new.external_idempotency_key is distinct from old.external_idempotency_key
+    or new.created_by is distinct from old.created_by
+    or new.created_at is distinct from old.created_at then
+    raise exception 'donation identity and giving snapshot cannot be changed';
+  end if;
+
+  if old.provider_payment_reference is not null
+    and new.provider_payment_reference is distinct from old.provider_payment_reference then
+    raise exception 'donation provider payment reference cannot be changed once set';
+  end if;
+
+  if old.provider_charge_reference is not null
+    and new.provider_charge_reference is distinct from old.provider_charge_reference then
+    raise exception 'donation provider charge reference cannot be changed once set';
+  end if;
+
+  if old.donated_at is not null and new.donated_at is distinct from old.donated_at then
+    raise exception 'donation collection timestamp cannot be changed once set';
+  end if;
+
+  return new;
+end;
+$$;
+
 create or replace function public.reject_audit_log_mutation()
 returns trigger
 language plpgsql
@@ -150,6 +226,10 @@ create table public.platform_admins (
   updated_at timestamptz not null default now()
 );
 
+create index platform_admins_created_by_fk_idx
+  on public.platform_admins (created_by)
+  where created_by is not null;
+
 create table public.churches (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -187,6 +267,8 @@ create table public.churches (
 
 create unique index churches_slug_unique_idx on public.churches (lower(slug));
 create index churches_status_idx on public.churches (status);
+create index churches_created_by_fk_idx on public.churches (created_by)
+  where created_by is not null;
 
 create table public.church_memberships (
   id uuid primary key default gen_random_uuid(),
@@ -221,6 +303,9 @@ create index church_memberships_user_status_idx
   where user_id is not null;
 create index church_memberships_church_role_idx
   on public.church_memberships (church_id, role, status);
+create index church_memberships_invited_by_fk_idx
+  on public.church_memberships (invited_by)
+  where invited_by is not null;
 
 -- -----------------------------------------------------------------------------
 -- Giving configuration
@@ -244,7 +329,8 @@ create table public.funds (
     char_length(slug) between 1 and 80
     and lower(slug) = slug
     and slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$'
-  )
+  ),
+  constraint funds_default_must_be_active check (not is_default or status = 'active')
 );
 
 create unique index funds_slug_unique_idx on public.funds (church_id, lower(slug));
@@ -253,6 +339,8 @@ create unique index funds_one_default_idx
   where is_default and status = 'active';
 create index funds_active_sort_idx on public.funds (church_id, sort_order, name)
   where status = 'active';
+create index funds_created_by_fk_idx on public.funds (created_by)
+  where created_by is not null;
 
 create table public.campaigns (
   id uuid primary key default gen_random_uuid(),
@@ -287,6 +375,8 @@ create table public.campaigns (
 create unique index campaigns_slug_unique_idx on public.campaigns (church_id, lower(slug));
 create index campaigns_public_idx on public.campaigns (church_id, status, starts_at, ends_at);
 create index campaigns_fund_idx on public.campaigns (church_id, fund_id);
+create index campaigns_created_by_fk_idx on public.campaigns (created_by)
+  where created_by is not null;
 
 -- -----------------------------------------------------------------------------
 -- Donors and payment-provider connections
@@ -314,6 +404,8 @@ create unique index donors_email_unique_idx
   on public.donors (church_id, lower(btrim(email)))
   where email is not null;
 create index donors_last_gave_idx on public.donors (church_id, last_gave_at desc);
+create index donors_auth_user_fk_idx on public.donors (auth_user_id)
+  where auth_user_id is not null;
 
 create table public.payment_provider_connections (
   id uuid primary key default gen_random_uuid(),
@@ -344,6 +436,9 @@ create unique index payment_provider_connections_one_primary_idx
   where is_primary;
 create index payment_provider_connections_status_idx
   on public.payment_provider_connections (church_id, status);
+create index payment_provider_connections_created_by_fk_idx
+  on public.payment_provider_connections (created_by)
+  where created_by is not null;
 
 comment on table public.payment_provider_connections is
   'Provider account identifiers and capabilities only. Never store API secrets or bank credentials here.';
@@ -376,6 +471,8 @@ create table public.recurring_gifts (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint recurring_gifts_tenant_key unique (church_id, id),
+  constraint recurring_gifts_tenant_identity_key
+    unique (church_id, id, donor_id, payment_connection_id),
   constraint recurring_gifts_donor_tenant_fk foreign key (church_id, donor_id)
     references public.donors(church_id, id) on delete restrict,
   constraint recurring_gifts_fund_tenant_fk foreign key (church_id, fund_id)
@@ -391,6 +488,19 @@ create table public.recurring_gifts (
   ),
   constraint recurring_gifts_pause_dates_valid check (
     resume_at is null or paused_at is null or resume_at > paused_at
+  ),
+  constraint recurring_gifts_provider_reference_required check (
+    status = 'incomplete'
+    or nullif(btrim(provider_subscription_reference), '') is not null
+  ),
+  constraint recurring_gifts_started_at_present check (
+    status = 'incomplete' or started_at is not null
+  ),
+  constraint recurring_gifts_paused_at_present check (
+    status <> 'paused' or paused_at is not null
+  ),
+  constraint recurring_gifts_canceled_at_present check (
+    status <> 'canceled' or canceled_at is not null
   )
 );
 
@@ -398,6 +508,12 @@ create unique index recurring_gifts_provider_subscription_unique_idx
   on public.recurring_gifts (payment_connection_id, provider_subscription_reference)
   where provider_subscription_reference is not null;
 create index recurring_gifts_donor_idx on public.recurring_gifts (church_id, donor_id, status);
+create index recurring_gifts_fund_fk_idx on public.recurring_gifts (church_id, fund_id);
+create index recurring_gifts_campaign_fk_idx
+  on public.recurring_gifts (church_id, campaign_id)
+  where campaign_id is not null;
+create index recurring_gifts_connection_fk_idx
+  on public.recurring_gifts (church_id, payment_connection_id);
 create index recurring_gifts_next_charge_idx on public.recurring_gifts (next_charge_at)
   where status in ('active', 'past_due');
 
@@ -443,8 +559,10 @@ create table public.donations (
     references public.funds(church_id, id) on delete restrict,
   constraint donations_campaign_tenant_fk foreign key (church_id, campaign_id)
     references public.campaigns(church_id, id) on delete restrict,
-  constraint donations_recurring_tenant_fk foreign key (church_id, recurring_gift_id)
-    references public.recurring_gifts(church_id, id) on delete restrict,
+  constraint donations_recurring_identity_tenant_fk
+    foreign key (church_id, recurring_gift_id, donor_id, payment_connection_id)
+    references public.recurring_gifts(church_id, id, donor_id, payment_connection_id)
+    on delete restrict,
   constraint donations_connection_tenant_fk foreign key (church_id, payment_connection_id)
     references public.payment_provider_connections(church_id, id) on delete restrict,
   constraint donations_amount_positive check (amount_minor > 0),
@@ -459,12 +577,40 @@ create table public.donations (
   constraint donations_online_connection_required check (
     source <> 'online' or payment_connection_id is not null
   ),
+  constraint donations_recurring_identity_required check (
+    recurring_gift_id is null
+    or (donor_id is not null and payment_connection_id is not null)
+  ),
+  constraint donations_idempotency_key_not_blank check (
+    external_idempotency_key is null or btrim(external_idempotency_key) <> ''
+  ),
+  constraint donations_online_idempotency_required check (
+    source <> 'online' or external_idempotency_key is not null
+  ),
   constraint donations_refunded_status_amount check (
     status <> 'refunded' or refunded_amount_minor = amount_minor
   ),
   constraint donations_partial_refund_status_amount check (
     status <> 'partially_refunded'
     or (refunded_amount_minor > 0 and refunded_amount_minor < amount_minor)
+  ),
+  constraint donations_success_timestamp_present check (
+    status not in ('succeeded', 'partially_refunded', 'refunded', 'disputed')
+    or donated_at is not null
+  ),
+  constraint donations_failure_timestamp_present check (
+    status <> 'failed' or failed_at is not null
+  ),
+  constraint donations_refund_timestamp_present check (
+    status not in ('partially_refunded', 'refunded') or refunded_at is not null
+  ),
+  constraint donations_refund_state_consistent check (
+    (refunded_amount_minor = 0 and refunded_at is null)
+    or (
+      refunded_amount_minor > 0
+      and status in ('partially_refunded', 'refunded', 'disputed')
+      and refunded_at is not null
+    )
   )
 );
 
@@ -482,9 +628,16 @@ create index donations_campaign_idx on public.donations (church_id, campaign_id,
   where campaign_id is not null;
 create index donations_recurring_idx on public.donations (church_id, recurring_gift_id, donated_at desc)
   where recurring_gift_id is not null;
+create index donations_connection_fk_idx
+  on public.donations (church_id, payment_connection_id)
+  where payment_connection_id is not null;
+create index donations_created_by_fk_idx on public.donations (created_by)
+  where created_by is not null;
 
 comment on column public.donations.payment_method_last4 is
   'Display-only last four digits returned by the provider; never store a PAN, CVC, or expiry.';
+comment on column public.donations.net_amount_minor is
+  'Gross minus processor fee minus refunded amount. This may be negative after a full refund when processor fees are not returned.';
 
 create table public.prayer_requests (
   id uuid primary key default gen_random_uuid(),
@@ -512,6 +665,10 @@ create table public.prayer_requests (
 
 create index prayer_requests_unreviewed_idx on public.prayer_requests (church_id, created_at)
   where reviewed_at is null and deleted_at is null;
+create index prayer_requests_donor_fk_idx on public.prayer_requests (church_id, donor_id)
+  where donor_id is not null;
+create index prayer_requests_reviewed_by_fk_idx on public.prayer_requests (reviewed_by)
+  where reviewed_by is not null;
 
 -- -----------------------------------------------------------------------------
 -- Receipts and annual statements
@@ -579,9 +736,9 @@ create table public.annual_statements (
   constraint annual_statements_tenant_donor_key unique (church_id, id, donor_id),
   constraint annual_statements_donor_tenant_fk foreign key (church_id, donor_id)
     references public.donors(church_id, id) on delete restrict,
-  constraint annual_statements_supersedes_tenant_fk
-    foreign key (church_id, supersedes_statement_id)
-    references public.annual_statements(church_id, id) on delete restrict,
+  constraint annual_statements_supersedes_donor_tenant_fk
+    foreign key (church_id, supersedes_statement_id, donor_id)
+    references public.annual_statements(church_id, id, donor_id) on delete restrict,
   constraint annual_statements_year_valid check (tax_year between 2000 and 2200),
   constraint annual_statements_version_positive check (version > 0),
   constraint annual_statements_number_not_blank check (btrim(statement_number) <> ''),
@@ -601,6 +758,12 @@ create unique index annual_statements_number_unique_idx
   on public.annual_statements (church_id, statement_number);
 create index annual_statements_donor_idx
   on public.annual_statements (church_id, donor_id, tax_year desc, version desc);
+create index annual_statements_supersedes_fk_idx
+  on public.annual_statements (church_id, supersedes_statement_id)
+  where supersedes_statement_id is not null;
+create index annual_statements_reviewed_by_fk_idx
+  on public.annual_statements (reviewed_by)
+  where reviewed_by is not null;
 
 create table public.statement_donations (
   church_id uuid not null references public.churches(id) on delete cascade,
@@ -714,6 +877,9 @@ create index payment_provider_references_donation_idx
 create index payment_provider_references_recurring_idx
   on public.payment_provider_references (church_id, recurring_gift_id)
   where recurring_gift_id is not null;
+create index payment_provider_references_subscription_fk_idx
+  on public.payment_provider_references (church_id, platform_subscription_id)
+  where platform_subscription_id is not null;
 
 comment on table public.payment_provider_references is
   'External provider object IDs plus sanitized metadata. No raw card, bank, credential, or webhook data.';
@@ -740,20 +906,21 @@ create table public.qr_links (
     references public.funds(church_id, id) on delete restrict,
   constraint qr_links_campaign_tenant_fk foreign key (church_id, campaign_id)
     references public.campaigns(church_id, id) on delete restrict,
-  constraint qr_links_short_code_not_blank check (btrim(short_code) <> ''),
+  constraint qr_links_short_code_format check (
+    char_length(short_code) between 8 and 64
+    and lower(short_code) = short_code
+    and short_code ~ '^[a-z0-9][a-z0-9_-]*[a-z0-9]$'
+  ),
   constraint qr_links_scan_count_nonnegative check (scan_count >= 0),
-  constraint qr_links_target_valid check (
-    (kind = 'church' and fund_id is null and campaign_id is null)
-    or (kind = 'fund' and fund_id is not null and campaign_id is null)
-    or (kind = 'campaign' and fund_id is null and campaign_id is not null)
+  constraint qr_links_v1_church_only check (
+    kind = 'church' and fund_id is null and campaign_id is null
   )
 );
 
-create unique index qr_links_short_code_unique_idx on public.qr_links (short_code);
-create unique index qr_links_one_active_church_code_idx
-  on public.qr_links (church_id)
-  where kind = 'church' and is_active;
-create index qr_links_target_idx on public.qr_links (church_id, kind, fund_id, campaign_id);
+create unique index qr_links_short_code_unique_idx on public.qr_links (lower(short_code));
+create unique index qr_links_one_church_code_idx on public.qr_links (church_id);
+create index qr_links_created_by_fk_idx on public.qr_links (created_by)
+  where created_by is not null;
 
 create table public.webhook_events (
   id uuid primary key default gen_random_uuid(),
@@ -788,6 +955,9 @@ create unique index webhook_events_external_unique_idx
 create index webhook_events_retry_idx on public.webhook_events (status, next_retry_at)
   where status in ('received', 'failed');
 create index webhook_events_church_idx on public.webhook_events (church_id, received_at desc);
+create index webhook_events_connection_fk_idx
+  on public.webhook_events (church_id, connection_id)
+  where connection_id is not null;
 
 comment on column public.webhook_events.sanitized_payload is
   'Allowlisted event fields only. Raw provider payloads may contain regulated payment data and must not be persisted here.';
@@ -843,6 +1013,15 @@ create unique index email_events_provider_message_unique_idx
 create index email_events_queue_idx on public.email_events (status, queued_at)
   where status in ('queued', 'failed');
 create index email_events_church_idx on public.email_events (church_id, created_at desc);
+create index email_events_donor_fk_idx on public.email_events (church_id, donor_id)
+  where donor_id is not null;
+create index email_events_donation_fk_idx on public.email_events (church_id, donation_id)
+  where donation_id is not null;
+create index email_events_receipt_fk_idx on public.email_events (church_id, receipt_id)
+  where receipt_id is not null;
+create index email_events_statement_fk_idx
+  on public.email_events (church_id, annual_statement_id)
+  where annual_statement_id is not null;
 
 create table public.audit_logs (
   id bigint generated by default as identity primary key,
@@ -870,14 +1049,72 @@ comment on table public.audit_logs is
   'Append-only audit trail. sanitized_changes must exclude secrets, full payment data, and prayer-request contents.';
 
 -- -----------------------------------------------------------------------------
--- Provisioning triggers
+-- Integrity and provisioning triggers
 -- -----------------------------------------------------------------------------
+
+create or replace function public.validate_gift_campaign_fund()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.campaign_id is not null and not exists (
+    select 1
+    from public.campaigns c
+    where c.id = new.campaign_id
+      and c.church_id = new.church_id
+      and (c.fund_id is null or c.fund_id = new.fund_id)
+      and c.currency = new.currency
+  ) then
+    raise exception 'campaign, fund, and currency must belong to the same giving route';
+  end if;
+
+  return new;
+end;
+$$;
+
+create or replace function public.validate_receipt_snapshot()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  donation_amount_minor bigint;
+  donation_currency text;
+  donation_donor_id uuid;
+  donation_status public.donation_status;
+begin
+  select d.amount_minor, d.currency, d.donor_id, d.status
+  into donation_amount_minor, donation_currency, donation_donor_id, donation_status
+  from public.donations d
+  where d.id = new.donation_id
+    and d.church_id = new.church_id;
+
+  if not found then
+    raise exception 'receipt donation was not found in the church';
+  end if;
+
+  if donation_status in ('pending', 'processing', 'failed', 'canceled') then
+    raise exception 'receipt requires a successfully collected donation';
+  end if;
+
+  if new.amount_minor <> donation_amount_minor
+    or new.currency <> donation_currency
+    or new.donor_id is distinct from donation_donor_id then
+    raise exception 'receipt snapshot must match the donation';
+  end if;
+
+  return new;
+end;
+$$;
 
 create or replace function public.handle_new_auth_user()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 begin
   insert into public.profiles (id, email, display_name)
@@ -912,7 +1149,7 @@ create or replace function public.sync_auth_user_email()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 begin
   update public.profiles
@@ -933,7 +1170,7 @@ create or replace function public.create_default_church_records()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 begin
   insert into public.funds (
@@ -963,13 +1200,119 @@ begin
 end;
 $$;
 
+create or replace function public.enforce_one_active_default_fund()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_church_id uuid;
+  active_default_count bigint;
+begin
+  target_church_id := case
+    when tg_op = 'DELETE' then old.church_id
+    else new.church_id
+  end;
+
+  -- Cascading church deletion removes its funds; there is no tenant invariant
+  -- left to enforce once the parent church no longer exists.
+  if not exists (
+    select 1 from public.churches c where c.id = target_church_id
+  ) then
+    return null;
+  end if;
+
+  select count(*)
+  into active_default_count
+  from public.funds f
+  where f.church_id = target_church_id
+    and f.is_default
+    and f.status = 'active';
+
+  if active_default_count <> 1 then
+    raise exception 'church must have exactly one active default fund';
+  end if;
+
+  return null;
+end;
+$$;
+
+create or replace function public.enforce_one_church_qr_link()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_church_id uuid;
+  qr_link_count bigint;
+begin
+  target_church_id := case
+    when tg_op = 'DELETE' then old.church_id
+    else new.church_id
+  end;
+
+  -- A cascading church deletion has no remaining tenant invariant to enforce.
+  if not exists (
+    select 1 from public.churches c where c.id = target_church_id
+  ) then
+    return null;
+  end if;
+
+  select count(*)
+  into qr_link_count
+  from public.qr_links q
+  where q.church_id = target_church_id;
+
+  if qr_link_count <> 1 then
+    raise exception 'church must have exactly one permanent QR link';
+  end if;
+
+  return null;
+end;
+$$;
+
 create trigger on_church_created
   after insert on public.churches
   for each row execute function public.create_default_church_records();
 
-revoke all on function public.handle_new_auth_user() from public, anon, authenticated;
-revoke all on function public.sync_auth_user_email() from public, anon, authenticated;
-revoke all on function public.create_default_church_records() from public, anon, authenticated;
+create constraint trigger funds_require_one_active_default
+  after insert or update or delete on public.funds
+  deferrable initially deferred
+  for each row execute function public.enforce_one_active_default_fund();
+
+create constraint trigger qr_links_require_one_per_church
+  after insert or update or delete on public.qr_links
+  deferrable initially deferred
+  for each row execute function public.enforce_one_church_qr_link();
+
+revoke all on function public.handle_new_auth_user()
+  from public, anon, authenticated, service_role;
+revoke all on function public.sync_auth_user_email()
+  from public, anon, authenticated, service_role;
+revoke all on function public.create_default_church_records()
+  from public, anon, authenticated, service_role;
+revoke all on function public.enforce_one_active_default_fund()
+  from public, anon, authenticated, service_role;
+revoke all on function public.enforce_one_church_qr_link()
+  from public, anon, authenticated, service_role;
+revoke all on function public.validate_gift_campaign_fund()
+  from public, anon, authenticated, service_role;
+revoke all on function public.validate_receipt_snapshot()
+  from public, anon, authenticated, service_role;
+
+create trigger recurring_gifts_validate_campaign_fund
+  before insert or update of church_id, campaign_id, fund_id, currency
+  on public.recurring_gifts
+  for each row execute function public.validate_gift_campaign_fund();
+create trigger donations_validate_campaign_fund
+  before insert or update of church_id, campaign_id, fund_id, currency
+  on public.donations
+  for each row execute function public.validate_gift_campaign_fund();
+create trigger receipts_validate_snapshot
+  before insert or update on public.receipts
+  for each row execute function public.validate_receipt_snapshot();
 
 -- Keep mutable timestamps trustworthy.
 create trigger profiles_set_updated_at before update on public.profiles
@@ -1023,6 +1366,8 @@ create trigger payment_provider_connections_keep_tenant before update on public.
   for each row execute function public.prevent_church_id_change();
 create trigger recurring_gifts_keep_tenant before update on public.recurring_gifts
   for each row execute function public.prevent_church_id_change();
+create trigger donations_keep_snapshot before update on public.donations
+  for each row execute function public.prevent_donation_snapshot_change();
 create trigger donations_keep_tenant before update on public.donations
   for each row execute function public.prevent_church_id_change();
 create trigger prayer_requests_keep_tenant before update on public.prayer_requests
@@ -1037,12 +1382,18 @@ create trigger payment_provider_references_keep_tenant before update on public.p
   for each row execute function public.prevent_church_id_change();
 create trigger qr_links_keep_tenant before update on public.qr_links
   for each row execute function public.prevent_church_id_change();
+create trigger qr_links_keep_routing before update on public.qr_links
+  for each row execute function public.prevent_qr_routing_change();
+create trigger webhook_events_keep_routing before update on public.webhook_events
+  for each row execute function public.protect_webhook_routing();
 create trigger email_events_keep_tenant before update on public.email_events
   for each row execute function public.prevent_church_id_change();
 create trigger statement_donations_keep_tenant before update on public.statement_donations
   for each row execute function public.prevent_church_id_change();
 create trigger audit_logs_append_only before update or delete on public.audit_logs
   for each row execute function public.reject_audit_log_mutation();
+create trigger audit_logs_reject_truncate before truncate on public.audit_logs
+  for each statement execute function public.reject_audit_log_mutation();
 
 -- -----------------------------------------------------------------------------
 -- RLS helper functions
@@ -1050,27 +1401,12 @@ create trigger audit_logs_append_only before update or delete on public.audit_lo
 -- fixed search_path and is exposed only to the authenticated role below.
 -- -----------------------------------------------------------------------------
 
-create or replace function public.is_platform_admin()
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1
-    from public.platform_admins pa
-    where pa.user_id = auth.uid()
-      and pa.is_active
-  );
-$$;
-
 create or replace function public.is_platform_super_admin()
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -1086,7 +1422,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -1105,7 +1441,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -1122,7 +1458,7 @@ returns boolean
 language sql
 stable
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   select exists (
     select 1
@@ -1132,38 +1468,19 @@ as $$
   );
 $$;
 
-create or replace function public.shares_church_with(target_user_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1
-    from public.church_memberships mine
-    join public.church_memberships theirs
-      on theirs.church_id = mine.church_id
-     and theirs.status = 'active'
-    where mine.user_id = auth.uid()
-      and mine.status = 'active'
-      and theirs.user_id = target_user_id
-  );
-$$;
+revoke all on function public.is_platform_super_admin()
+  from public, anon, authenticated, service_role;
+revoke all on function public.is_church_member(uuid)
+  from public, anon, authenticated, service_role;
+revoke all on function public.has_church_role(uuid, public.church_member_role[])
+  from public, anon, authenticated, service_role;
+revoke all on function public.owns_donor(uuid)
+  from public, anon, authenticated, service_role;
 
-revoke all on function public.is_platform_admin() from public;
-revoke all on function public.is_platform_super_admin() from public;
-revoke all on function public.is_church_member(uuid) from public;
-revoke all on function public.has_church_role(uuid, public.church_member_role[]) from public;
-revoke all on function public.owns_donor(uuid) from public;
-revoke all on function public.shares_church_with(uuid) from public;
-
-grant execute on function public.is_platform_admin() to authenticated;
 grant execute on function public.is_platform_super_admin() to authenticated;
 grant execute on function public.is_church_member(uuid) to authenticated;
 grant execute on function public.has_church_role(uuid, public.church_member_role[]) to authenticated;
 grant execute on function public.owns_donor(uuid) to authenticated;
-grant execute on function public.shares_church_with(uuid) to authenticated;
 
 -- -----------------------------------------------------------------------------
 -- Row-level security
@@ -1191,13 +1508,9 @@ alter table public.email_events enable row level security;
 alter table public.audit_logs enable row level security;
 
 -- Profiles and platform administrators
-create policy profiles_read_own_or_colleagues
+create policy profiles_read_own
   on public.profiles for select to authenticated
-  using (
-    id = (select auth.uid())
-    or public.shares_church_with(id)
-    or public.is_platform_super_admin()
-  );
+  using (id = (select auth.uid()));
 
 create policy profiles_update_self
   on public.profiles for update to authenticated
@@ -1206,49 +1519,35 @@ create policy profiles_update_self
 
 create policy platform_admins_read
   on public.platform_admins for select to authenticated
-  using (user_id = (select auth.uid()) or public.is_platform_super_admin());
+  using (user_id = (select auth.uid()) or (select public.is_platform_super_admin()));
 
 -- Churches
 create policy churches_public_read_active
-  on public.churches for select to anon, authenticated
+  on public.churches for select to anon
   using (status = 'active');
 
 create policy churches_members_read
   on public.churches for select to authenticated
   using (public.is_church_member(id));
 
-create policy churches_owners_update
-  on public.churches for update to authenticated
-  using (public.has_church_role(id, array['owner']::public.church_member_role[]))
-  with check (public.has_church_role(id, array['owner']::public.church_member_role[]));
-
-create policy churches_platform_admin_manage
-  on public.churches for all to authenticated
-  using (public.is_platform_super_admin())
-  with check (public.is_platform_super_admin());
-
-create policy churches_platform_staff_read
+create policy churches_platform_admin_read
   on public.churches for select to authenticated
-  using (public.is_platform_admin());
+  using ((select public.is_platform_super_admin()));
 
 -- Church memberships
-create policy church_memberships_members_read
+create policy church_memberships_read_own_or_owner
   on public.church_memberships for select to authenticated
-  using (public.is_church_member(church_id));
-
-create policy church_memberships_owners_manage
-  on public.church_memberships for all to authenticated
-  using (public.has_church_role(church_id, array['owner']::public.church_member_role[]))
-  with check (public.has_church_role(church_id, array['owner']::public.church_member_role[]));
-
-create policy church_memberships_platform_admin_manage
-  on public.church_memberships for all to authenticated
-  using (public.is_platform_super_admin())
-  with check (public.is_platform_super_admin());
+  using (
+    user_id = (select auth.uid())
+    or public.has_church_role(
+      church_id,
+      array['owner']::public.church_member_role[]
+    )
+  );
 
 -- Public giving configuration
 create policy funds_public_read_active
-  on public.funds for select to anon, authenticated
+  on public.funds for select to anon
   using (
     status = 'active'
     and exists (
@@ -1261,28 +1560,12 @@ create policy funds_members_read
   on public.funds for select to authenticated
   using (public.is_church_member(church_id));
 
-create policy funds_church_admins_manage
-  on public.funds for all to authenticated
-  using (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  );
-
-create policy funds_platform_admin_manage
-  on public.funds for all to authenticated
-  using (public.is_platform_super_admin())
-  with check (public.is_platform_super_admin());
+create policy funds_platform_admin_read
+  on public.funds for select to authenticated
+  using ((select public.is_platform_super_admin()));
 
 create policy campaigns_public_read_active
-  on public.campaigns for select to anon, authenticated
+  on public.campaigns for select to anon
   using (
     status = 'active'
     and (starts_at is null or starts_at <= now())
@@ -1297,85 +1580,23 @@ create policy campaigns_members_read
   on public.campaigns for select to authenticated
   using (public.is_church_member(church_id));
 
-create policy campaigns_church_admins_manage
-  on public.campaigns for all to authenticated
-  using (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  );
-
-create policy campaigns_platform_admin_manage
-  on public.campaigns for all to authenticated
-  using (public.is_platform_super_admin())
-  with check (public.is_platform_super_admin());
+create policy campaigns_platform_admin_read
+  on public.campaigns for select to authenticated
+  using ((select public.is_platform_super_admin()));
 
 -- Donors
 create policy donors_read_own
   on public.donors for select to authenticated
   using (auth_user_id = (select auth.uid()));
 
-create policy donors_church_members_read
+create policy donors_finance_read
   on public.donors for select to authenticated
-  using (public.is_church_member(church_id));
-
-create policy donors_insert_self
-  on public.donors for insert to authenticated
-  with check (
-    auth_user_id = (select auth.uid())
-    and email is not null
-    and lower(btrim(email)) = lower(btrim(coalesce(auth.jwt() ->> 'email', '')))
-    and exists (
-      select 1
-      from public.churches c
-      where c.id = donors.church_id
-        and c.status = 'active'
-    )
-  );
-
-create policy donors_church_admins_insert
-  on public.donors for insert to authenticated
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  );
-
-create policy donors_update_own
-  on public.donors for update to authenticated
-  using (auth_user_id = (select auth.uid()))
-  with check (
-    auth_user_id = (select auth.uid())
-    and email is not null
-    and lower(btrim(email)) = lower(btrim(coalesce(auth.jwt() ->> 'email', '')))
-  );
-
-create policy donors_church_admins_update
-  on public.donors for update to authenticated
   using (
     public.has_church_role(
       church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
+      array['owner', 'finance_admin', 'accountant']::public.church_member_role[]
     )
   );
-
-create policy donors_platform_admin_read
-  on public.donors for select to authenticated
-  using (public.is_platform_super_admin());
 
 -- Provider connections are readable by finance roles but mutations should flow
 -- through trusted server code after provider onboarding/verification.
@@ -1387,10 +1608,6 @@ create policy payment_connections_finance_read
       array['owner', 'finance_admin']::public.church_member_role[]
     )
   );
-
-create policy payment_connections_platform_admin_read
-  on public.payment_provider_connections for select to authenticated
-  using (public.is_platform_super_admin());
 
 -- Recurring gifts are provider-backed. Donors and church finance users can read
 -- them; all changes go through server endpoints so provider and database state
@@ -1408,10 +1625,6 @@ create policy recurring_gifts_finance_read
     )
   );
 
-create policy recurring_gifts_platform_admin_read
-  on public.recurring_gifts for select to authenticated
-  using (public.is_platform_super_admin());
-
 -- Donations
 create policy donations_donor_read
   on public.donations for select to authenticated
@@ -1425,37 +1638,6 @@ create policy donations_finance_read
       array['owner', 'finance_admin', 'accountant']::public.church_member_role[]
     )
   );
-
-create policy donations_finance_insert_manual
-  on public.donations for insert to authenticated
-  with check (
-    source in ('cash', 'cheque', 'other')
-    and public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  );
-
-create policy donations_finance_update_manual
-  on public.donations for update to authenticated
-  using (
-    source in ('cash', 'cheque', 'other')
-    and public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  )
-  with check (
-    source in ('cash', 'cheque', 'other')
-    and public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  );
-
-create policy donations_platform_admin_read
-  on public.donations for select to authenticated
-  using (public.is_platform_super_admin());
 
 -- Prayer requests are intentionally isolated from financial reporting access.
 create policy prayer_requests_donor_read
@@ -1471,22 +1653,6 @@ create policy prayer_requests_pastoral_read
   using (
     deleted_at is null
     and public.has_church_role(
-      church_id,
-      array['owner', 'staff']::public.church_member_role[]
-    )
-  );
-
-create policy prayer_requests_pastoral_update
-  on public.prayer_requests for update to authenticated
-  using (
-    deleted_at is null
-    and public.has_church_role(
-      church_id,
-      array['owner', 'staff']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
       church_id,
       array['owner', 'staff']::public.church_member_role[]
     )
@@ -1510,38 +1676,6 @@ create policy receipts_finance_read
     )
   );
 
-create policy receipts_finance_insert
-  on public.receipts for insert to authenticated
-  with check (
-    status = 'draft'
-    and public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  );
-
-create policy receipts_finance_update
-  on public.receipts for update to authenticated
-  using (
-    status = 'draft'
-    and
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-    and status in ('draft', 'issued')
-  );
-
-create policy receipts_platform_admin_read
-  on public.receipts for select to authenticated
-  using (public.is_platform_super_admin());
-
 create policy annual_statements_donor_read
   on public.annual_statements for select to authenticated
   using (status = 'published' and public.owns_donor(donor_id));
@@ -1554,38 +1688,6 @@ create policy annual_statements_finance_read
       array['owner', 'finance_admin', 'accountant']::public.church_member_role[]
     )
   );
-
-create policy annual_statements_finance_insert
-  on public.annual_statements for insert to authenticated
-  with check (
-    status = 'draft'
-    and public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  );
-
-create policy annual_statements_finance_update
-  on public.annual_statements for update to authenticated
-  using (
-    status = 'draft'
-    and
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-    and status in ('draft', 'published')
-  );
-
-create policy annual_statements_platform_admin_read
-  on public.annual_statements for select to authenticated
-  using (public.is_platform_super_admin());
 
 create policy statement_donations_donor_read
   on public.statement_donations for select to authenticated
@@ -1609,42 +1711,6 @@ create policy statement_donations_finance_read
     )
   );
 
-create policy statement_donations_finance_insert
-  on public.statement_donations for insert to authenticated
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-    and exists (
-      select 1
-      from public.annual_statements ast
-      where ast.id = statement_donations.statement_id
-        and ast.church_id = statement_donations.church_id
-        and ast.status = 'draft'
-    )
-  );
-
-create policy statement_donations_finance_delete
-  on public.statement_donations for delete to authenticated
-  using (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-    and exists (
-      select 1
-      from public.annual_statements ast
-      where ast.id = statement_donations.statement_id
-        and ast.church_id = statement_donations.church_id
-        and ast.status = 'draft'
-    )
-  );
-
-create policy statement_donations_platform_admin_read
-  on public.statement_donations for select to authenticated
-  using (public.is_platform_super_admin());
-
 -- Platform billing and provider reconciliation
 create policy platform_subscriptions_owner_read
   on public.platform_subscriptions for select to authenticated
@@ -1652,24 +1718,11 @@ create policy platform_subscriptions_owner_read
 
 create policy platform_subscriptions_platform_admin_read
   on public.platform_subscriptions for select to authenticated
-  using (public.is_platform_super_admin());
-
-create policy payment_provider_references_finance_read
-  on public.payment_provider_references for select to authenticated
-  using (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin']::public.church_member_role[]
-    )
-  );
-
-create policy payment_provider_references_platform_admin_read
-  on public.payment_provider_references for select to authenticated
-  using (public.is_platform_super_admin());
+  using ((select public.is_platform_super_admin()));
 
 -- QR links
 create policy qr_links_public_read_active
-  on public.qr_links for select to anon, authenticated
+  on public.qr_links for select to anon
   using (
     is_active
     and exists (
@@ -1682,31 +1735,11 @@ create policy qr_links_members_read
   on public.qr_links for select to authenticated
   using (public.is_church_member(church_id));
 
-create policy qr_links_church_admins_manage
-  on public.qr_links for all to authenticated
-  using (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  )
-  with check (
-    public.has_church_role(
-      church_id,
-      array['owner', 'finance_admin', 'staff']::public.church_member_role[]
-    )
-  );
-
-create policy qr_links_platform_admin_manage
-  on public.qr_links for all to authenticated
-  using (public.is_platform_super_admin())
-  with check (public.is_platform_super_admin());
+create policy qr_links_platform_admin_read
+  on public.qr_links for select to authenticated
+  using ((select public.is_platform_super_admin()));
 
 -- Operational records
-create policy webhook_events_platform_admin_read
-  on public.webhook_events for select to authenticated
-  using (public.is_platform_super_admin());
-
 create policy email_events_finance_read
   on public.email_events for select to authenticated
   using (
@@ -1717,20 +1750,12 @@ create policy email_events_finance_read
     )
   );
 
-create policy email_events_platform_admin_read
-  on public.email_events for select to authenticated
-  using (public.is_platform_super_admin());
-
 create policy audit_logs_church_owner_read
   on public.audit_logs for select to authenticated
   using (
     church_id is not null
     and public.has_church_role(church_id, array['owner']::public.church_member_role[])
   );
-
-create policy audit_logs_platform_admin_read
-  on public.audit_logs for select to authenticated
-  using (public.is_platform_super_admin());
 
 -- -----------------------------------------------------------------------------
 -- API privileges
@@ -1762,12 +1787,64 @@ revoke all privileges on table
   public.webhook_events,
   public.email_events,
   public.audit_logs
-from anon, authenticated;
+from anon, authenticated, service_role;
+
+revoke all privileges on sequence public.audit_logs_id_seq
+  from public, anon, authenticated, service_role;
 
 grant usage on schema public to anon, authenticated;
 
-grant select on public.churches, public.funds, public.campaigns, public.qr_links
-  to anon;
+-- Anonymous giving reads use an explicit public projection. Internal attribution,
+-- analytics, legal, and operational columns are not available to anonymous API
+-- clients even when the row is public under RLS.
+grant select (
+  id,
+  name,
+  slug,
+  status,
+  default_currency,
+  timezone,
+  logo_url,
+  primary_color,
+  secondary_color,
+  thank_you_message,
+  support_email
+) on public.churches to anon;
+
+grant select (
+  id,
+  church_id,
+  name,
+  slug,
+  description,
+  status,
+  is_default,
+  sort_order
+) on public.funds to anon;
+
+grant select (
+  id,
+  church_id,
+  fund_id,
+  name,
+  slug,
+  description,
+  image_url,
+  status,
+  goal_amount_minor,
+  currency,
+  starts_at,
+  ends_at
+) on public.campaigns to anon;
+
+grant select (
+  church_id,
+  kind,
+  fund_id,
+  campaign_id,
+  short_code,
+  is_active
+) on public.qr_links to anon;
 
 grant select on table
   public.profiles,
@@ -1777,50 +1854,105 @@ grant select on table
   public.funds,
   public.campaigns,
   public.donors,
-  public.payment_provider_connections,
-  public.recurring_gifts,
-  public.donations,
   public.prayer_requests,
   public.receipts,
   public.annual_statements,
   public.statement_donations,
-  public.platform_subscriptions,
-  public.payment_provider_references,
   public.qr_links,
-  public.webhook_events,
   public.email_events,
   public.audit_logs
 to authenticated;
 
+-- Provider identifiers, idempotency values, and raw operational details remain
+-- server-only. Authenticated readers receive only the fields required by the
+-- member and church dashboards, with row access still constrained by RLS.
+grant select (
+  id,
+  church_id,
+  provider,
+  status,
+  is_primary,
+  charges_enabled,
+  recurring_enabled,
+  payouts_enabled,
+  supported_currencies,
+  capabilities,
+  last_synced_at,
+  created_at,
+  updated_at
+) on public.payment_provider_connections to authenticated;
+
+grant select (
+  id,
+  church_id,
+  donor_id,
+  fund_id,
+  campaign_id,
+  amount_minor,
+  currency,
+  frequency,
+  status,
+  payment_method_brand,
+  payment_method_last4,
+  started_at,
+  next_charge_at,
+  paused_at,
+  resume_at,
+  canceled_at,
+  cancel_reason,
+  created_at,
+  updated_at
+) on public.recurring_gifts to authenticated;
+
+grant select (
+  id,
+  church_id,
+  donor_id,
+  fund_id,
+  campaign_id,
+  recurring_gift_id,
+  source,
+  status,
+  amount_minor,
+  currency,
+  processing_fee_minor,
+  refunded_amount_minor,
+  net_amount_minor,
+  payment_method_brand,
+  payment_method_last4,
+  donor_display_name,
+  donor_email,
+  donor_message,
+  donated_at,
+  settled_at,
+  failed_at,
+  refunded_at,
+  created_at,
+  updated_at
+) on public.donations to authenticated;
+
+grant select (
+  id,
+  church_id,
+  provider,
+  status,
+  plan_code,
+  amount_minor,
+  currency,
+  current_period_start,
+  current_period_end,
+  grace_period_ends_at,
+  cancel_at_period_end,
+  canceled_at,
+  created_at,
+  updated_at
+) on public.platform_subscriptions to authenticated;
+
 grant update (display_name, phone, avatar_url) on public.profiles to authenticated;
 
-grant update (
-  name,
-  legal_name,
-  timezone,
-  logo_url,
-  primary_color,
-  secondary_color,
-  thank_you_message,
-  support_email,
-  public_settings
-) on public.churches to authenticated;
-
-grant insert, update, delete on public.church_memberships to authenticated;
-grant insert, update, delete on public.funds to authenticated;
-grant insert, update, delete on public.campaigns to authenticated;
-
-grant insert on public.donors to authenticated;
-grant update (display_name, email, phone, is_anonymous) on public.donors to authenticated;
-
-grant insert, update on public.donations to authenticated;
-grant update (reviewed_at, reviewed_by, deleted_at) on public.prayer_requests to authenticated;
-grant insert, update on public.receipts to authenticated;
-grant insert, update on public.annual_statements to authenticated;
-grant insert, delete on public.statement_donations to authenticated;
-grant insert, update, delete on public.qr_links to authenticated;
-
-grant all privileges on table
+-- Application mutations stay closed until the corresponding audited workflow
+-- task adds a narrowly scoped policy or transaction function.
+grant select, insert, update, delete on table
   public.profiles,
   public.platform_admins,
   public.churches,
@@ -1837,11 +1969,17 @@ grant all privileges on table
   public.statement_donations,
   public.platform_subscriptions,
   public.payment_provider_references,
-  public.qr_links,
   public.webhook_events,
-  public.email_events,
-  public.audit_logs
+  public.email_events
 to service_role;
+
+-- The service role can update QR analytics/availability, but cannot insert or
+-- delete the single permanent routing record provisioned with each church.
+grant select on public.qr_links to service_role;
+grant update (is_active, scan_count, last_scanned_at, updated_at)
+  on public.qr_links to service_role;
+
+grant select, insert on public.audit_logs to service_role;
 grant usage, select on sequence public.audit_logs_id_seq to service_role;
 
 commit;

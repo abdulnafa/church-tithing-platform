@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { CalendarIcon, CardIcon, ChartIcon, DownloadIcon, HeartIcon } from "@/components/icons";
+import { requireChurchPermission } from "@/lib/auth/guards";
+import { hasChurchPermission } from "@/lib/auth/permissions";
 import {
   demoDonations,
   demoFundBreakdown,
@@ -42,7 +44,12 @@ function createReportCsv() {
   return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
 }
 
-export default function ChurchReportsPage() {
+export default async function ChurchReportsPage() {
+  const { workspace } = await requireChurchPermission("reports_read");
+  const canExport = hasChurchPermission(
+    workspace.permissions,
+    "reports_export",
+  );
   const maximumTrend = Math.max(...demoGivingTrend.map((point) => point.total.amountMinor));
   const sixWeekTotal = demoGivingTrend.reduce((total, point) => total + point.total.amountMinor, 0);
   const grossGiving = demoDonations.reduce((total, donation) => total + donation.amount.amountMinor, 0);
@@ -53,22 +60,24 @@ export default function ChurchReportsPage() {
     .filter((donation) => donation.recurringGiftId)
     .reduce((total, donation) => total + donation.amount.amountMinor, 0);
   const oneTimeAmount = grossGiving - recurringAmount;
-  const reportCsv = createReportCsv();
+  const reportCsv = canExport ? createReportCsv() : "";
 
   return (
-    <main className="mx-auto max-w-[1320px] pb-24">
+    <main className="mx-auto max-w-[1320px] pb-24" key={workspace.churchId}>
         <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:hidden">
           <div>
             <p className="text-xs text-[var(--muted)]">Financial snapshot</p>
             <h1 className="font-display mt-1 text-3xl tracking-[-0.035em]">Giving reports</h1>
           </div>
-          <a
-            className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-xs font-bold text-white"
-            download="harbour-grace-giving-2026-08-17.csv"
-            href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
-          >
-            <DownloadIcon size={16} /> Export CSV
-          </a>
+          {canExport ? (
+            <a
+              className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-xs font-bold text-white"
+              download="harbour-grace-giving-2026-08-17.csv"
+              href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
+            >
+              <DownloadIcon size={16} /> Export CSV
+            </a>
+          ) : null}
         </div>
 
         <section className="mb-6 flex flex-col gap-4 rounded-[22px] bg-[var(--ink)] p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -77,13 +86,15 @@ export default function ChurchReportsPage() {
             <h2 className="mt-2 text-lg font-bold">11–17 August 2026</h2>
             <p className="mt-1 text-xs leading-5 text-white/60">Seeded demo records for bookkeeping review and reporting workflow validation.</p>
           </div>
-          <a
-            className="focus-ring hidden shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold !text-[#122235] sm:inline-flex"
-            download="harbour-grace-giving-2026-08-17.csv"
-            href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
-          >
-            <DownloadIcon size={16} /> Export CSV
-          </a>
+          {canExport ? (
+            <a
+              className="focus-ring hidden shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold !text-[#122235] sm:inline-flex"
+              download="harbour-grace-giving-2026-08-17.csv"
+              href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
+            >
+              <DownloadIcon size={16} /> Export CSV
+            </a>
+          ) : null}
         </section>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
