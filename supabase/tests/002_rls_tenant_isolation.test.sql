@@ -6,56 +6,66 @@ select extensions.plan(50);
 
 -- This suite exercises policies as Supabase API roles. All synthetic fixtures
 -- are transaction-scoped and the final rollback leaves hosted databases clean.
-insert into auth.users (id, email, raw_user_meta_data)
+insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
 values
   (
     '00000000-0000-4000-8000-000000000601',
     'p04-owner-a@example.test',
+    now(),
     '{"display_name":"P04 Owner A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000602',
     'p04-finance-a@example.test',
+    now(),
     '{"display_name":"P04 Finance A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000603',
     'p04-staff-a@example.test',
+    now(),
     '{"display_name":"P04 Staff A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000604',
     'p04-owner-b@example.test',
+    now(),
     '{"display_name":"P04 Owner B"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000605',
     'p04-donor-a@example.test',
+    now(),
     '{"display_name":"P04 Donor A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000606',
     'p04-donor-b@example.test',
+    now(),
     '{"display_name":"P04 Donor B"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000607',
     'p04-disabled-a@example.test',
+    now(),
     '{"display_name":"P04 Disabled Owner A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000608',
     'p04-revoked-a@example.test',
+    now(),
     '{"display_name":"P04 Revoked Owner A"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000609',
     'p04-super@example.test',
+    now(),
     '{"display_name":"P04 Super Admin"}'::jsonb
   ),
   (
     '00000000-0000-4000-8000-000000000610',
     'p04-support@example.test',
+    now(),
     '{"display_name":"P04 Support Admin"}'::jsonb
   );
 

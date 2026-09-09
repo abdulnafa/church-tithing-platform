@@ -3,6 +3,13 @@
 import { useMemo, useState } from "react";
 
 import { ShieldIcon } from "@/components/icons";
+import {
+  DONOR_IDENTITY_LIMITS,
+  getDonorDisplayNameError,
+  getDonorEmailError,
+  validateGuestIdentityValues,
+  type GuestIdentityValues,
+} from "@/lib/donor-identity";
 import type {
   PublicGivingCampaignOption,
   PublicGivingChurch,
@@ -44,6 +51,13 @@ export function GivingForm({
   const [customAmount, setCustomAmount] = useState("");
   const [givingTarget, setGivingTarget] = useState(`fund:${defaultFundId}`);
   const [frequency, setFrequency] = useState<Frequency>("one_time");
+  const [guestIdentity, setGuestIdentity] = useState<GuestIdentityValues>({
+    fullName: "",
+    email: "",
+  });
+  const [touchedGuestFields, setTouchedGuestFields] = useState<
+    Readonly<Record<keyof GuestIdentityValues, boolean>>
+  >({ fullName: false, email: false });
 
   const selectedCampaign = givingTarget.startsWith("campaign:")
     ? campaigns.find(
@@ -67,10 +81,28 @@ export function GivingForm({
     () => formatAmount(currency, effectiveAmount),
     [currency, effectiveAmount],
   );
+  const guestIdentityValidation = validateGuestIdentityValues(guestIdentity);
+  const guestNameError = touchedGuestFields.fullName
+    ? getDonorDisplayNameError(guestIdentity.fullName)
+    : undefined;
+  const guestEmailError = touchedGuestFields.email
+    ? getDonorEmailError(guestIdentity.email)
+    : undefined;
 
   function chooseAmount(value: number) {
     setAmount(value);
     setCustomAmount("");
+  }
+
+  function updateGuestIdentity(
+    field: keyof GuestIdentityValues,
+    value: string,
+  ) {
+    setGuestIdentity((current) => ({ ...current, [field]: value }));
+  }
+
+  function markGuestFieldTouched(field: keyof GuestIdentityValues) {
+    setTouchedGuestFields((current) => ({ ...current, [field]: true }));
   }
 
   if (funds.length === 0) {
@@ -99,8 +131,8 @@ export function GivingForm({
         className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-950"
         role="note"
       >
-        Online payments are not enabled yet. You can review the church&apos;s current
-        giving options, but this page will not collect donor or payment details.
+        Online payments are not enabled yet. The required name and email fields
+        below are checked only in this page and are not sent or saved.
       </div>
 
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--sage)]">
@@ -222,6 +254,102 @@ export function GivingForm({
         </p>
       </fieldset>
 
+      <fieldset className="mt-6 rounded-[22px] border border-[var(--line)] bg-white/65 p-4 sm:p-5">
+        <legend className="px-1 text-xs font-bold text-[var(--ink-soft)]">
+          Guest details
+        </legend>
+        <p
+          className="mb-4 text-[10px] leading-5 text-[var(--ink-soft)]"
+          id="giving-guest-details-help"
+        >
+          Full name and email will be required for guest checkout. For now, they
+          remain only in this unsaved page draft; no account lookup or donation
+          submission occurs.
+        </p>
+        <div className="grid min-w-0 gap-4 sm:grid-cols-2">
+          <label className="min-w-0" htmlFor="giving-guest-name">
+            <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">
+              Full name
+            </span>
+            <input
+              aria-describedby={[
+                "giving-guest-details-help",
+                guestNameError ? "giving-guest-name-error" : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-invalid={Boolean(guestNameError)}
+              autoComplete="name"
+              className="focus-ring min-w-0 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]"
+              id="giving-guest-name"
+              name="guestFullName"
+              onBlur={() => markGuestFieldTouched("fullName")}
+              onChange={(event) =>
+                updateGuestIdentity("fullName", event.target.value)
+              }
+              placeholder="Your full name"
+              required
+              type="text"
+              value={guestIdentity.fullName}
+            />
+            {guestNameError ? (
+              <span
+                className="mt-2 block text-[10px] text-[#9b463b]"
+                id="giving-guest-name-error"
+              >
+                {guestNameError}
+              </span>
+            ) : null}
+          </label>
+          <label className="min-w-0" htmlFor="giving-guest-email">
+            <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">
+              Email address
+            </span>
+            <input
+              aria-describedby={[
+                "giving-guest-details-help",
+                guestEmailError ? "giving-guest-email-error" : undefined,
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              aria-invalid={Boolean(guestEmailError)}
+              autoCapitalize="none"
+              autoComplete="email"
+              className="focus-ring min-w-0 w-full rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm outline-none placeholder:text-[#a0a9b4]"
+              id="giving-guest-email"
+              maxLength={DONOR_IDENTITY_LIMITS.email}
+              name="guestEmail"
+              onBlur={() => markGuestFieldTouched("email")}
+              onChange={(event) =>
+                updateGuestIdentity("email", event.target.value)
+              }
+              placeholder="you@example.com"
+              required
+              spellCheck={false}
+              type="email"
+              value={guestIdentity.email}
+            />
+            {guestEmailError ? (
+              <span
+                className="mt-2 block text-[10px] text-[#9b463b]"
+                id="giving-guest-email-error"
+              >
+                {guestEmailError}
+              </span>
+            ) : null}
+          </label>
+        </div>
+        <p
+          aria-live="polite"
+          className="mt-4 text-[10px] leading-5 text-[var(--ink-soft)]"
+          role="status"
+        >
+          {guestIdentityValidation.success
+            ? "These details look ready, but nothing has been submitted or saved."
+            : "Complete both required fields before checkout is enabled in a later phase."}
+        </p>
+      </fieldset>
+
       <div className="mt-6 flex min-w-0 items-center justify-between gap-3 border-t border-[var(--line)] pt-5">
         <div className="min-w-0">
           <p className="text-xs text-[var(--ink-soft)]">
@@ -243,7 +371,8 @@ export function GivingForm({
       </button>
       <p className="mt-4 flex items-start justify-center gap-2 text-center text-[10px] font-medium leading-4 text-[var(--ink-soft)]">
         <ShieldIcon className="mt-0.5 shrink-0" size={13} />
-        No donor, prayer request, or payment information is collected on this page.
+        Name and email stay in this unsaved page draft. No prayer request or
+        payment information is requested.
       </p>
     </section>
   );

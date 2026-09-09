@@ -32,7 +32,7 @@ const campaigns = [
 ] as const;
 
 describe("public giving option selector", () => {
-  it("renders real fund and campaign choices while keeping submission disabled", () => {
+  it("renders real choices and required guest fields while keeping submission disabled", () => {
     const markup = renderToStaticMarkup(
       <GivingForm
         campaigns={campaigns}
@@ -49,13 +49,17 @@ describe("public giving option selector", () => {
     expect(markup).toMatch(
       /<button[^>]*disabled=""[^>]*>Online payments not yet available<\/button>/,
     );
-    expect(markup).toContain("this page will not collect donor or payment details");
+    expect(markup).toContain("Full name");
+    expect(markup).toContain("Email address");
+    expect(markup).toContain('autoComplete="name"');
+    expect(markup).toContain('autoComplete="email"');
+    expect(markup).toMatch(/<input[^>]*required=""[^>]*name="guestFullName"/);
+    expect(markup).toMatch(/<input[^>]*required=""[^>]*name="guestEmail"/);
     expect(markup).toContain(
-      "No donor, prayer request, or payment information is collected",
+      "Name and email stay in this unsaved page draft",
     );
-    expect(markup).not.toMatch(
-      /Full name|Email address|Phone number|<textarea|secure checkout|payment is handled/i,
-    );
+    expect(markup).toContain("no account lookup or donation submission occurs");
+    expect(markup).not.toMatch(/Phone number|<textarea|secure checkout|payment is handled/i);
   });
 
   it("uses labelled controls and a default target that work without horizontal overflow", () => {
@@ -75,6 +79,8 @@ describe("public giving option selector", () => {
     expect(markup).toContain("<legend");
     expect(markup).toContain('for="giving-custom-amount"');
     expect(markup).toContain('for="giving-target"');
+    expect(markup).toContain('for="giving-guest-name"');
+    expect(markup).toContain('for="giving-guest-email"');
     expect(markup).toContain('aria-describedby="giving-target-description"');
     expect(markup).toContain('aria-pressed="true"');
     expect(markup).toContain('value="fund:20000000-0000-4000-8000-000000000001" selected=""');
@@ -107,6 +113,19 @@ describe("public giving option selector", () => {
 
     expect(source).toContain("PublicGivingCampaignOption");
     expect(source).not.toMatch(/goalAmountMinor|raised|donation total/i);
+  });
+
+  it("keeps guest details in transient component state with no send or persistence path", () => {
+    const source = readFileSync(
+      new URL("./giving-form.tsx", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("useState<GuestIdentityValues>");
+    expect(source).toContain("validateGuestIdentityValues");
+    expect(source).toContain("onBlur");
+    expect(source).not.toMatch(/localStorage|sessionStorage|fetch\(|\.rpc\(|formAction|action=|onSubmit/);
+    expect(source).not.toMatch(/guest.*password|auth_user|donorId|churchId/i);
   });
 
   it("wraps long persisted descriptions on narrow screens", () => {

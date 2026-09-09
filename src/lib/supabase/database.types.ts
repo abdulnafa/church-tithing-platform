@@ -891,41 +891,102 @@ export type Database = {
           },
         ]
       }
+      donor_profile_mutation_requests: {
+        Row: {
+          audit_log_id: number
+          church_id: string
+          created_at: string
+          payload_sha256: string
+          request_id: string
+          requested_by_user_id: string
+          result_donor_id: string
+          result_operation: string
+          result_profile_revision: number
+        }
+        Insert: {
+          audit_log_id: number
+          church_id: string
+          created_at?: string
+          payload_sha256: string
+          request_id: string
+          requested_by_user_id: string
+          result_donor_id: string
+          result_operation: string
+          result_profile_revision: number
+        }
+        Update: {
+          audit_log_id?: number
+          church_id?: string
+          created_at?: string
+          payload_sha256?: string
+          request_id?: string
+          requested_by_user_id?: string
+          result_donor_id?: string
+          result_operation?: string
+          result_profile_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "donor_profile_mutation_requests_audit_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: true
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donor_profile_mutation_requests_church_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "donor_profile_mutation_requests_donor_fkey"
+            columns: ["church_id", "result_donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["church_id", "id"]
+          },
+        ]
+      }
       donors: {
         Row: {
           auth_user_id: string | null
           church_id: string
           created_at: string
-          display_name: string | null
-          email: string | null
+          display_name: string
+          email: string
           id: string
           is_anonymous: boolean
           last_gave_at: string | null
           phone: string | null
+          profile_revision: number
           updated_at: string
         }
         Insert: {
           auth_user_id?: string | null
           church_id: string
           created_at?: string
-          display_name?: string | null
-          email?: string | null
+          display_name: string
+          email: string
           id?: string
           is_anonymous?: boolean
           last_gave_at?: string | null
           phone?: string | null
+          profile_revision?: number
           updated_at?: string
         }
         Update: {
           auth_user_id?: string | null
           church_id?: string
           created_at?: string
-          display_name?: string | null
-          email?: string | null
+          display_name?: string
+          email?: string
           id?: string
           is_anonymous?: boolean
           last_gave_at?: string | null
           phone?: string | null
+          profile_revision?: number
           updated_at?: string
         }
         Relationships: [
@@ -2032,6 +2093,14 @@ export type Database = {
         Args: { input_value: string }
         Returns: string
       }
+      canonicalize_donor_display_name: {
+        Args: { input_value: string }
+        Returns: string
+      }
+      canonicalize_donor_email: {
+        Args: { input_value: string }
+        Returns: string
+      }
       canonicalize_fund_description: {
         Args: { input_value: string }
         Returns: string
@@ -2065,6 +2134,10 @@ export type Database = {
           settings_request_id: string
           target_church_id: string
         }
+        Returns: boolean
+      }
+      donor_text_has_unsafe_formatting: {
+        Args: { input_value: string }
         Returns: boolean
       }
       get_church_campaign_progress: {
@@ -2120,6 +2193,16 @@ export type Database = {
       get_my_church_permissions: {
         Args: { target_church_id: string }
         Returns: Database["public"]["Enums"]["church_permission"][]
+      }
+      get_my_donor_profile: {
+        Args: { target_church_id: string }
+        Returns: Database["public"]["CompositeTypes"]["my_donor_profile_record"][]
+        SetofOptions: {
+          from: "*"
+          to: "my_donor_profile_record"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       get_pending_church_logo_cleanups: {
         Args: { target_church_id: string }
@@ -2189,6 +2272,7 @@ export type Database = {
       is_active_authenticated_user: { Args: never; Returns: boolean }
       is_church_member: { Args: { target_church_id: string }; Returns: boolean }
       is_platform_super_admin: { Args: never; Returns: boolean }
+      is_valid_donor_email: { Args: { input_value: string }; Returns: boolean }
       is_valid_provisioning_email: {
         Args: { candidate: string }
         Returns: boolean
@@ -2247,6 +2331,21 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "church_staff_mutation_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      mutate_my_donor_profile: {
+        Args: {
+          expected_profile_revision: number
+          profile_display_name: string
+          profile_request_id: string
+          target_church_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["my_donor_profile_mutation_result"]
+        SetofOptions: {
+          from: "*"
+          to: "my_donor_profile_mutation_result"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2367,6 +2466,8 @@ export type Database = {
         | "prayer_request_reviewed"
         | "webhook_processed"
         | "email_status_updated"
+        | "donor_profile_created"
+        | "donor_profile_updated"
       audit_actor_type: "user" | "system" | "webhook" | "support"
       audit_entity:
         | "platform_settings"
@@ -2381,6 +2482,7 @@ export type Database = {
         | "prayer_request"
         | "webhook_event"
         | "email_event"
+        | "donor"
       campaign_status: "draft" | "active" | "closed" | "archived"
       church_member_role: "owner" | "finance_admin" | "staff" | "accountant"
       church_permission:
@@ -2594,6 +2696,21 @@ export type Database = {
         staff:
           | Database["public"]["CompositeTypes"]["church_staff_record"][]
           | null
+      }
+      my_donor_profile_mutation_result: {
+        church_id: string | null
+        donor_id: string | null
+        profile_revision: number | null
+        operation: string | null
+        replayed: boolean | null
+      }
+      my_donor_profile_record: {
+        church_id: string | null
+        donor_id: string | null
+        display_name: string | null
+        email: string | null
+        profile_revision: number | null
+        updated_at: string | null
       }
       platform_onboarding_defaults_snapshot: {
         default_currency: string | null
@@ -2827,6 +2944,8 @@ export const Constants = {
         "prayer_request_reviewed",
         "webhook_processed",
         "email_status_updated",
+        "donor_profile_created",
+        "donor_profile_updated",
       ],
       audit_actor_type: ["user", "system", "webhook", "support"],
       audit_entity: [
@@ -2842,6 +2961,7 @@ export const Constants = {
         "prayer_request",
         "webhook_event",
         "email_event",
+        "donor",
       ],
       campaign_status: ["draft", "active", "closed", "archived"],
       church_member_role: ["owner", "finance_admin", "staff", "accountant"],
