@@ -15,6 +15,12 @@ import type {
   PublicGivingChurch,
   PublicGivingFund,
 } from "@/lib/public-giving";
+import {
+  getPrayerDraftConsentBoundary,
+  getPrayerRequestCodePointLength,
+  limitPrayerRequestDraft,
+  PRAYER_REQUEST_LIMITS,
+} from "@/lib/prayer-request";
 
 type Frequency = "one_time" | "weekly" | "monthly";
 
@@ -55,6 +61,8 @@ export function GivingForm({
     fullName: "",
     email: "",
   });
+  const [prayerRequest, setPrayerRequest] = useState("");
+  const [prayerConsent, setPrayerConsent] = useState(false);
   const [touchedGuestFields, setTouchedGuestFields] = useState<
     Readonly<Record<keyof GuestIdentityValues, boolean>>
   >({ fullName: false, email: false });
@@ -88,6 +96,17 @@ export function GivingForm({
   const guestEmailError = touchedGuestFields.email
     ? getDonorEmailError(guestIdentity.email)
     : undefined;
+  const prayerConsentBoundary = getPrayerDraftConsentBoundary(
+    prayerRequest,
+    prayerConsent,
+  );
+  const prayerBodyError =
+    prayerConsentBoundary.hasText && !prayerConsentBoundary.canConsent
+      ? "Remove unsupported control or text-direction characters."
+      : undefined;
+  const canConsentToPrayerDraft = prayerConsentBoundary.canConsent;
+  const prayerDraftReady = prayerConsentBoundary.consented;
+  const prayerRequestLength = getPrayerRequestCodePointLength(prayerRequest);
 
   function chooseAmount(value: number) {
     setAmount(value);
@@ -103,6 +122,14 @@ export function GivingForm({
 
   function markGuestFieldTouched(field: keyof GuestIdentityValues) {
     setTouchedGuestFields((current) => ({ ...current, [field]: true }));
+  }
+
+  function updatePrayerRequest(value: string) {
+    const limitedValue = limitPrayerRequestDraft(value);
+    setPrayerRequest(limitedValue);
+    if (!getPrayerDraftConsentBoundary(limitedValue, prayerConsent).consented) {
+      setPrayerConsent(false);
+    }
   }
 
   if (funds.length === 0) {
@@ -350,6 +377,101 @@ export function GivingForm({
         </p>
       </fieldset>
 
+      <fieldset className="mt-6 rounded-[22px] border border-[var(--line)] bg-white/65 p-4 sm:p-5">
+        <legend className="px-1 text-xs font-bold text-[var(--ink-soft)]">
+          Optional prayer request draft
+        </legend>
+        <p
+          className="mb-4 text-[10px] leading-5 text-[var(--ink-soft)]"
+          id="giving-prayer-privacy-help"
+        >
+          This is a local, unsaved preview only. This application does not send or
+          store anything entered here while checkout is disabled. Final consent
+          and retention wording remains pending approval.
+        </p>
+        <label className="block min-w-0" htmlFor="giving-prayer-request">
+          <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">
+            Prayer request
+          </span>
+          <textarea
+            aria-describedby={[
+              "giving-prayer-privacy-help",
+              "giving-prayer-counter",
+              prayerBodyError ? "giving-prayer-error" : undefined,
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            aria-invalid={Boolean(prayerBodyError)}
+            autoComplete="off"
+            className="focus-ring min-h-28 min-w-0 w-full resize-y rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm leading-6 outline-none placeholder:text-[#a0a9b4]"
+            id="giving-prayer-request"
+            name="prayerRequestDraft"
+            onChange={(event) => updatePrayerRequest(event.target.value)}
+            placeholder="Write an optional prayer request"
+            spellCheck={false}
+            value={prayerRequest}
+          />
+        </label>
+        {prayerBodyError ? (
+          <p
+            className="mt-2 text-[10px] leading-5 text-[#9b463b]"
+            id="giving-prayer-error"
+            role="alert"
+          >
+            {prayerBodyError}
+          </p>
+        ) : null}
+        <p
+          className="mt-2 text-right text-[9px] text-[var(--ink-soft)]"
+          id="giving-prayer-counter"
+        >
+          {prayerRequestLength}/{PRAYER_REQUEST_LIMITS.body} characters maximum
+        </p>
+
+        <label
+          className={`mt-4 flex min-w-0 items-start gap-3 rounded-2xl border px-4 py-3 text-[10px] leading-5 ${
+            canConsentToPrayerDraft
+              ? "border-[#c7dbd3] bg-[var(--sage-pale)] text-[var(--sage-dark)]"
+              : "border-[var(--line)] bg-[#f0eee8] text-[var(--ink-soft)]"
+          }`}
+          htmlFor="giving-prayer-consent"
+        >
+          <input
+            checked={canConsentToPrayerDraft && prayerConsent}
+            className="focus-ring mt-0.5 size-4 shrink-0 accent-[var(--sage)]"
+            disabled={!canConsentToPrayerDraft}
+            id="giving-prayer-consent"
+            name="prayerConsentDraft"
+            onChange={(event) => setPrayerConsent(event.target.checked)}
+            required={canConsentToPrayerDraft}
+            type="checkbox"
+          />
+          <span>
+            Provisional consent: I choose to share this request with authorized
+            prayer reviewers if prayer submission is enabled later.
+          </span>
+        </label>
+        <p
+          aria-live="polite"
+          className="mt-3 text-[10px] leading-5 text-[var(--ink-soft)]"
+          role="status"
+        >
+          {prayerBodyError
+            ? "This prayer draft is not ready. Remove the unsupported characters before giving consent."
+            : !prayerConsentBoundary.hasText
+            ? "Add prayer text to enable the provisional consent choice."
+            : prayerDraftReady
+              ? "This prayer draft and consent choice look ready, but neither has been submitted or saved."
+              : "Explicit consent is required whenever a prayer request is included."}
+        </p>
+        <p className="mt-3 text-[9px] leading-4 text-[var(--ink-soft)]">
+          Prayer text is kept outside donation receipts, statements, and
+          accounting reports. This preview does not send prayer text by email.
+          Final email handling, access, retention, and deletion wording remain
+          pending approval.
+        </p>
+      </fieldset>
+
       <div className="mt-6 flex min-w-0 items-center justify-between gap-3 border-t border-[var(--line)] pt-5">
         <div className="min-w-0">
           <p className="text-xs text-[var(--ink-soft)]">
@@ -371,8 +493,9 @@ export function GivingForm({
       </button>
       <p className="mt-4 flex items-start justify-center gap-2 text-center text-[10px] font-medium leading-4 text-[var(--ink-soft)]">
         <ShieldIcon className="mt-0.5 shrink-0" size={13} />
-        Name and email stay in this unsaved page draft. No prayer request or
-        payment information is requested.
+        Name and email stay in this unsaved page draft. Prayer text and the
+        provisional consent choice also stay only here. No payment information is
+        requested.
       </p>
     </section>
   );

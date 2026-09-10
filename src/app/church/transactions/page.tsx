@@ -3,7 +3,7 @@ import { ChurchTransactions } from "@/components/church-transactions";
 import { SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { CardIcon, ChartIcon, HeartIcon, UsersIcon } from "@/components/icons";
 import { requireChurchPermission } from "@/lib/auth/guards";
-import { hasChurchPermission, hasEveryChurchPermission } from "@/lib/auth/permissions";
+import { hasEveryChurchPermission } from "@/lib/auth/permissions";
 import {
   createChurchTransactionExportDetails,
   createChurchTransactionFundOptions,
@@ -26,10 +26,6 @@ export default async function ChurchTransactionsPage() {
     "reports_read",
     "reports_export",
   ]);
-  const canReviewPrayerRequests = hasChurchPermission(
-    workspace.permissions,
-    "prayer_requests_review",
-  );
   const grossAmountMinor = demoDonations.reduce(
     (total, donation) => total + donation.amount.amountMinor,
     0,
@@ -48,9 +44,6 @@ export default async function ChurchTransactionsPage() {
   const guestPayments = demoDonations.filter(
     (donation) => donation.donor.memberId === null,
   ).length;
-  const prayerRequests = canReviewPrayerRequests
-    ? demoDonations.filter((donation) => donation.hasPrayerRequest).length
-    : 0;
   const transactionRows = createChurchTransactionRows(demoDonations);
   const transactionFunds = createChurchTransactionFundOptions(demoFunds);
   const transactionExportDetails = canExport
@@ -153,12 +146,6 @@ export default async function ChurchTransactionsPage() {
             <section className="soft-card rounded-[22px] p-5">
               <SectionHeader eyebrow="At a glance" title="Giving notes" />
               <dl className="mt-4 space-y-3">
-                {canReviewPrayerRequests ? (
-                  <div className="flex items-center justify-between gap-4 rounded-2xl bg-[var(--sage-pale)] px-4 py-3">
-                    <dt className="text-[10px] font-semibold text-[var(--sage-dark)]">Prayer requests</dt>
-                    <dd className="text-sm font-bold text-[var(--sage-dark)]">{prayerRequests}</dd>
-                  </div>
-                ) : null}
                 <div className="flex items-center justify-between gap-4 rounded-2xl bg-[#edf1f5] px-4 py-3">
                   <dt className="text-[10px] font-semibold text-[#496785]">Funds represented</dt>
                   <dd className="text-sm font-bold text-[#496785]">{new Set(demoDonations.map((donation) => donation.fundId)).size}</dd>

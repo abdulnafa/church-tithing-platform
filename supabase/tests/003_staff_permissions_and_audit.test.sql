@@ -137,8 +137,13 @@ values
     'cash', 'succeeded', 6000, 'CAD', now()
   );
 
+insert into public.prayer_request_consent_versions (
+  version_id, wording_sha256, approved_at
+) values ('p16-p07-permissions-v1', repeat('3', 64), now());
+
 insert into public.prayer_requests (
-  id, church_id, donation_id, donor_id, body, consented_at
+  id, church_id, donation_id, donor_id, body, consented_at,
+  consent_version_id
 )
 values (
   '00000000-0000-4000-8000-000000000838',
@@ -146,7 +151,8 @@ values (
   '00000000-0000-4000-8000-000000000836',
   '00000000-0000-4000-8000-000000000832',
   'P07 hosted private prayer',
-  now()
+  now(),
+  'p16-p07-permissions-v1'
 );
 
 insert into public.receipts (
@@ -411,7 +417,6 @@ select extensions.is(
         'payment_connections_permission_read',
         'recurring_gifts_permission_read',
         'donations_permission_read',
-        'prayer_requests_permission_read',
         'receipts_permission_read',
         'annual_statements_permission_read',
         'statement_donations_permission_read',
@@ -422,8 +427,8 @@ select extensions.is(
       )
       and cmd = 'SELECT'
   ),
-  15::bigint,
-  'all fifteen P07 policies are read-only'
+  14::bigint,
+  'fourteen non-prayer P07 policies remain read-only after P16 closes direct prayer access'
 );
 
 -- Exact role matrix (19-22).
@@ -537,7 +542,12 @@ set local role authenticated;
 select extensions.is((select count(id) from public.churches), 1::bigint, 'owner sees one church');
 select extensions.is((select count(id) from public.church_memberships), 1::bigint, 'owner direct membership reads are self-only; staff roster is RPC-only');
 select extensions.is((select count(id) from public.donations), 1::bigint, 'owner sees own-church donations');
-select extensions.is((select count(id) from public.prayer_requests), 1::bigint, 'owner sees own-church prayer requests');
+select extensions.is(
+  (select count(*) from public.get_prayer_request_queue(
+    '00000000-0000-4000-8000-000000000821')),
+  1::bigint,
+  'owner sees own-church prayers only through the P16 queue RPC'
+);
 select extensions.is((select count(id) from public.platform_subscriptions), 1::bigint, 'owner sees own-church billing status');
 select extensions.is((select count(id) from public.audit_logs), 1::bigint, 'owner sees own-church audit events but not global events');
 reset role;
@@ -548,7 +558,12 @@ select extensions.is((select count(id) from public.donors), 1::bigint, 'finance 
 select extensions.is((select count(id) from public.donations), 1::bigint, 'finance administrator sees own-church finances');
 select extensions.is((select count(id) from public.payment_provider_connections), 1::bigint, 'finance administrator sees provider status');
 select extensions.is((select count(id) from public.email_events), 1::bigint, 'finance administrator sees email status');
-select extensions.is((select count(id) from public.prayer_requests), 0::bigint, 'finance administrator cannot read prayer text');
+select extensions.throws_like(
+  $$select * from public.get_prayer_request_queue(
+      '00000000-0000-4000-8000-000000000821')$$,
+  '%PRAYER_QUEUE_FORBIDDEN%',
+  'finance administrator cannot read prayer text'
+);
 select extensions.is((select count(id) from public.audit_logs), 0::bigint, 'finance administrator cannot read audit events');
 reset role;
 
@@ -568,7 +583,12 @@ select extensions.is((select count(id) from public.funds), 1::bigint, 'staff see
 select extensions.is((select count(id) from public.campaigns), 1::bigint, 'staff sees campaigns');
 select extensions.is((select count(church_id) from public.qr_links), 1::bigint, 'staff sees the permanent QR record');
 select extensions.is((select count(id) from public.donations), 0::bigint, 'staff cannot read donation rows');
-select extensions.is((select count(id) from public.prayer_requests), 0::bigint, 'staff cannot read prayer request text');
+select extensions.throws_like(
+  $$select * from public.get_prayer_request_queue(
+      '00000000-0000-4000-8000-000000000821')$$,
+  '%PRAYER_QUEUE_FORBIDDEN%',
+  'staff cannot read prayer request text'
+);
 reset role;
 
 set local "request.jwt.claim.sub" = '00000000-0000-4000-8000-000000000812';

@@ -130,6 +130,7 @@ describe("protected route source contract", () => {
 
     expect(shell).toContain('label: "Overview", href: "/church", Icon: HomeIcon, permissions: ["workspace_read"]');
     expect(shell).toContain('label: "Transactions", href: "/church/transactions", Icon: CardIcon, permissions: ["financial_read"]');
+    expect(shell).toContain('label: "Prayer requests", href: "/church/prayers", Icon: HeartIcon, permissions: ["prayer_requests_review"]');
     expect(shell).toContain('label: "Members & staff", href: "/church/members", Icon: UsersIcon, permissions: ["members_read", "staff_manage"], permissionMode: "any"');
     expect(shell).toContain('label: "Funds & campaigns", href: "/church/campaigns", Icon: HeartIcon, permissions: ["funds_read", "campaigns_read"], permissionMode: "any"');
     expect(shell).toContain('label: "Reports", href: "/church/reports", Icon: ChartIcon, permissions: ["reports_read"]');

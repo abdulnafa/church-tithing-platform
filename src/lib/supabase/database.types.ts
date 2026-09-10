@@ -1554,44 +1554,132 @@ export type Database = {
           },
         ]
       }
+      prayer_request_consent_versions: {
+        Row: {
+          approved_at: string
+          created_at: string
+          version_id: string
+          wording_sha256: string
+        }
+        Insert: {
+          approved_at: string
+          created_at?: string
+          version_id: string
+          wording_sha256: string
+        }
+        Update: {
+          approved_at?: string
+          created_at?: string
+          version_id?: string
+          wording_sha256?: string
+        }
+        Relationships: []
+      }
+      prayer_request_review_requests: {
+        Row: {
+          audit_log_id: number
+          church_id: string
+          created_at: string
+          payload_sha256: string
+          prayer_request_id: string
+          request_id: string
+          requested_by_user_id: string
+          result_reviewed_at: string
+          result_revision: number
+        }
+        Insert: {
+          audit_log_id: number
+          church_id: string
+          created_at?: string
+          payload_sha256: string
+          prayer_request_id: string
+          request_id: string
+          requested_by_user_id: string
+          result_reviewed_at: string
+          result_revision: number
+        }
+        Update: {
+          audit_log_id?: number
+          church_id?: string
+          created_at?: string
+          payload_sha256?: string
+          prayer_request_id?: string
+          request_id?: string
+          requested_by_user_id?: string
+          result_reviewed_at?: string
+          result_revision?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prayer_request_review_requests_audit_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: true
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_request_review_requests_church_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_request_review_requests_prayer_fkey"
+            columns: ["church_id", "prayer_request_id"]
+            isOneToOne: true
+            referencedRelation: "prayer_requests"
+            referencedColumns: ["church_id", "id"]
+          },
+        ]
+      }
       prayer_requests: {
         Row: {
           body: string
           church_id: string
+          consent_version_id: string
           consented_at: string
           created_at: string
           deleted_at: string | null
-          donation_id: string
+          donation_id: string | null
           donor_id: string | null
           id: string
+          retention_policy_status: string
           reviewed_at: string | null
           reviewed_by: string | null
+          revision: number
           updated_at: string
         }
         Insert: {
           body: string
           church_id: string
+          consent_version_id: string
           consented_at: string
           created_at?: string
           deleted_at?: string | null
-          donation_id: string
+          donation_id?: string | null
           donor_id?: string | null
           id?: string
+          retention_policy_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number
           updated_at?: string
         }
         Update: {
           body?: string
           church_id?: string
+          consent_version_id?: string
           consented_at?: string
           created_at?: string
           deleted_at?: string | null
-          donation_id?: string
+          donation_id?: string | null
           donor_id?: string | null
           id?: string
+          retention_policy_status?: string
           reviewed_at?: string | null
           reviewed_by?: string | null
+          revision?: number
           updated_at?: string
         }
         Relationships: [
@@ -1601,6 +1689,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "churches"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prayer_requests_consent_version_fkey"
+            columns: ["consent_version_id"]
+            isOneToOne: false
+            referencedRelation: "prayer_request_consent_versions"
+            referencedColumns: ["version_id"]
           },
           {
             foreignKeyName: "prayer_requests_donation_donor_match_fk"
@@ -2106,6 +2201,10 @@ export type Database = {
         Returns: string
       }
       canonicalize_fund_name: { Args: { input_value: string }; Returns: string }
+      canonicalize_prayer_request_body: {
+        Args: { input_value: string }
+        Returns: string
+      }
       canonicalize_public_display_name: {
         Args: { input_value: string }
         Returns: string
@@ -2233,6 +2332,16 @@ export type Database = {
           to: "platform_tenant_page"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      get_prayer_request_queue: {
+        Args: { target_church_id: string }
+        Returns: Database["public"]["CompositeTypes"]["prayer_request_queue_record"][]
+        SetofOptions: {
+          from: "*"
+          to: "prayer_request_queue_record"
+          isOneToOne: false
+          isSetofReturn: true
         }
       }
       get_public_church_identities: {
@@ -2371,6 +2480,10 @@ export type Database = {
         Args: { target_church_id: string }
         Returns: string[]
       }
+      prayer_request_body_has_unsafe_formatting: {
+        Args: { input_value: string }
+        Returns: boolean
+      }
       provision_church: {
         Args: {
           church_currency?: string
@@ -2389,6 +2502,21 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "church_provisioning_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      review_prayer_request: {
+        Args: {
+          expected_revision: number
+          review_request_id: string
+          target_church_id: string
+          target_prayer_request_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["prayer_request_review_result"]
+        SetofOptions: {
+          from: "*"
+          to: "prayer_request_review_result"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -2762,6 +2890,22 @@ export type Database = {
         created_at: string | null
         activated_at: string | null
         suspended_at: string | null
+      }
+      prayer_request_queue_record: {
+        prayer_request_id: string | null
+        body: string | null
+        is_reviewed: boolean | null
+        consented_at: string | null
+        created_at: string | null
+        reviewed_at: string | null
+        updated_at: string | null
+        revision: number | null
+      }
+      prayer_request_review_result: {
+        prayer_request_id: string | null
+        reviewed_at: string | null
+        revision: number | null
+        replayed: boolean | null
       }
       public_church_identity_record: {
         church_id: string | null

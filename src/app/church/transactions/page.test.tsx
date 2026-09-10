@@ -32,7 +32,7 @@ describe("church transaction secondary permissions", () => {
     vi.clearAllMocks();
   });
 
-  it("omits prayer-request metadata for the actual Accountant grant", async () => {
+  it("keeps prayer-request metadata out of the financial route", async () => {
     usePermissions([
       "workspace_read",
       "funds_read",
@@ -53,12 +53,12 @@ describe("church transaction secondary permissions", () => {
     expect(markup).not.toContain("Prayer requests");
   });
 
-  it("shows prayer-request metadata to an owner", async () => {
+  it("keeps prayer-request metadata out of an owner's financial route", async () => {
     usePermissions(CHURCH_PERMISSION_VALUES);
 
     const markup = renderToStaticMarkup(await ChurchTransactionsPage());
 
-    expect(markup).toContain("Prayer requests");
+    expect(markup).not.toContain("Prayer requests");
   });
 
   it("omits export-only fields and controls without reports_export", async () => {

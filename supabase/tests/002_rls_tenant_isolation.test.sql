@@ -311,13 +311,18 @@ values
     now()
   );
 
+insert into public.prayer_request_consent_versions (
+  version_id, wording_sha256, approved_at
+) values ('p16-p04-rls-v1', repeat('2', 64), now());
+
 insert into public.prayer_requests (
   id,
   church_id,
   donation_id,
   donor_id,
   body,
-  consented_at
+  consented_at,
+  consent_version_id
 )
 values
   (
@@ -326,7 +331,8 @@ values
     '00000000-0000-4000-8000-000000000661',
     '00000000-0000-4000-8000-000000000641',
     'P04 hosted prayer A',
-    now()
+    now(),
+    'p16-p04-rls-v1'
   ),
   (
     '00000000-0000-4000-8000-000000000672',
@@ -334,7 +340,8 @@ values
     '00000000-0000-4000-8000-000000000663',
     '00000000-0000-4000-8000-000000000643',
     'P04 hosted prayer B',
-    now()
+    now(),
+    'p16-p04-rls-v1'
   );
 
 insert into public.platform_subscriptions (
@@ -460,9 +467,11 @@ select extensions.is(
   'owner sees donations from their church only'
 );
 select extensions.is(
-  (select count(id) from public.prayer_requests),
+  (select count(*) from public.get_prayer_request_queue(
+    '00000000-0000-4000-8000-000000000621'
+  )),
   1::bigint,
-  'owner sees non-deleted prayers from their church only'
+  'owner sees only their church prayer queue through the bounded RPC'
 );
 select extensions.is(
   (select count(id) from public.platform_subscriptions),
@@ -497,9 +506,10 @@ select extensions.is(
   1::bigint,
   'finance administrator sees their church provider connection only'
 );
-select extensions.is(
-  (select count(id) from public.prayer_requests),
-  0::bigint,
+select extensions.throws_like(
+  $$select * from public.get_prayer_request_queue(
+      '00000000-0000-4000-8000-000000000621')$$,
+  '%PRAYER_QUEUE_FORBIDDEN%',
   'finance administrator cannot read pastoral prayer data'
 );
 select extensions.is(
@@ -525,9 +535,10 @@ select extensions.is(
   0::bigint,
   'staff cannot read financial donation rows'
 );
-select extensions.is(
-  (select count(id) from public.prayer_requests),
-  0::bigint,
+select extensions.throws_like(
+  $$select * from public.get_prayer_request_queue(
+      '00000000-0000-4000-8000-000000000621')$$,
+  '%PRAYER_QUEUE_FORBIDDEN%',
   'staff cannot read prayer requests without the dedicated permission'
 );
 
@@ -548,10 +559,11 @@ select extensions.is(
   1::bigint,
   'donor sees only their own donation'
 );
-select extensions.is(
-  (select count(id) from public.prayer_requests),
-  1::bigint,
-  'donor sees only their own non-deleted prayer'
+select extensions.throws_like(
+  $$select * from public.get_prayer_request_queue(
+      '00000000-0000-4000-8000-000000000621')$$,
+  '%PRAYER_QUEUE_FORBIDDEN%',
+  'donor prayer self-read remains closed in P16'
 );
 
 reset role;

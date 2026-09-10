@@ -59,7 +59,18 @@ describe("public giving option selector", () => {
       "Name and email stay in this unsaved page draft",
     );
     expect(markup).toContain("no account lookup or donation submission occurs");
-    expect(markup).not.toMatch(/Phone number|<textarea|secure checkout|payment is handled/i);
+    expect(markup).toContain("Optional prayer request draft");
+    expect(markup).toContain('name="prayerRequestDraft"');
+    expect(markup).toContain('autoComplete="off"');
+    expect(markup).toContain('spellCheck="false"');
+    expect(markup).toContain("0/2000 characters maximum");
+    expect(markup).toContain('name="prayerConsentDraft"');
+    expect(markup).toContain("Provisional consent");
+    expect(markup).toContain("This application does not send or");
+    expect(markup).toContain("outside donation receipts, statements");
+    expect(markup).toContain("does not send prayer text by email");
+    expect(markup).toContain("Final email handling, access, retention");
+    expect(markup).not.toMatch(/Phone number|secure checkout|payment is handled/i);
   });
 
   it("uses labelled controls and a default target that work without horizontal overflow", () => {
@@ -81,6 +92,8 @@ describe("public giving option selector", () => {
     expect(markup).toContain('for="giving-target"');
     expect(markup).toContain('for="giving-guest-name"');
     expect(markup).toContain('for="giving-guest-email"');
+    expect(markup).toContain('for="giving-prayer-request"');
+    expect(markup).toContain('for="giving-prayer-consent"');
     expect(markup).toContain('aria-describedby="giving-target-description"');
     expect(markup).toContain('aria-pressed="true"');
     expect(markup).toContain('value="fund:20000000-0000-4000-8000-000000000001" selected=""');
@@ -122,6 +135,21 @@ describe("public giving option selector", () => {
     );
 
     expect(source).toContain("useState<GuestIdentityValues>");
+    expect(source).toContain('useState("")');
+    expect(source).toContain("setPrayerConsent(false)");
+    expect(source).toContain("required={canConsentToPrayerDraft}");
+    expect(source).toContain("disabled={!canConsentToPrayerDraft}");
+    expect(source).toContain(
+      "checked={canConsentToPrayerDraft && prayerConsent}",
+    );
+    expect(source).toContain("limitPrayerRequestDraft");
+    expect(source).toContain("getPrayerDraftConsentBoundary");
+    expect(source).toContain("aria-invalid={Boolean(prayerBodyError)}");
+    expect(source).toContain("unsupported control or text-direction");
+    expect(source).toContain(
+      "!getPrayerDraftConsentBoundary(limitedValue, prayerConsent).consented",
+    );
+    expect(source).not.toContain("maxLength={PRAYER_REQUEST_LIMITS.body}");
     expect(source).toContain("validateGuestIdentityValues");
     expect(source).toContain("onBlur");
     expect(source).not.toMatch(/localStorage|sessionStorage|fetch\(|\.rpc\(|formAction|action=|onSubmit/);

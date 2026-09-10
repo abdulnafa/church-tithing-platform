@@ -35,6 +35,7 @@ const navByKind = {
   church: [
     { label: "Overview", href: "/church", Icon: HomeIcon, permissions: ["workspace_read"] },
     { label: "Transactions", href: "/church/transactions", Icon: CardIcon, permissions: ["financial_read"] },
+    { label: "Prayer requests", href: "/church/prayers", Icon: HeartIcon, permissions: ["prayer_requests_review"] },
     { label: "Members & staff", href: "/church/members", Icon: UsersIcon, permissions: ["members_read", "staff_manage"], permissionMode: "any" },
     { label: "Funds & campaigns", href: "/church/campaigns", Icon: HeartIcon, permissions: ["funds_read", "campaigns_read"], permissionMode: "any" },
     { label: "Reports", href: "/church/reports", Icon: ChartIcon, permissions: ["reports_read"] },
@@ -52,6 +53,7 @@ const navByKind = {
 const churchRouteHeaders: Readonly<Record<string, readonly [title: string, subtitle: string]>> = {
   "/church": ["Church overview", "Current giving summary"],
   "/church/transactions": ["Transactions", "Search, filter and export church giving"],
+  "/church/prayers": ["Prayer requests", "Private pastoral review queue"],
   "/church/members": ["Members & staff", "Saved staff access and demo member activity"],
   "/church/campaigns": ["Funds & campaigns", "Giving categories and campaign progress"],
   "/church/reports": ["Reports", "Giving performance and bookkeeping"],

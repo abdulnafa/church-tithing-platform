@@ -174,7 +174,6 @@ export interface Donation {
   readonly providerPaymentReference: string;
   readonly receiptNumber: string | null;
   readonly message: string | null;
-  readonly hasPrayerRequest: boolean;
   readonly createdAt: string;
   readonly settledAt: string | null;
 }

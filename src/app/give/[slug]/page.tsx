@@ -151,9 +151,11 @@ export default async function GivingPage({ params }: GivingPageProps) {
             <h2 className="mt-3 text-sm font-bold">No payment collection yet</h2>
             <p className="mt-2 text-xs leading-5 text-[var(--ink-soft)]">
               A name and email can be checked in an unsaved page draft, but they
-              are not sent or used to look up an account. No prayer request, card,
-              or bank information is requested. Future donations must settle
-              directly to the church through its approved provider.
+              are not sent or used to look up an account. An optional prayer
+              request and provisional consent can also be drafted locally, but
+              nothing is submitted or saved. No card or bank information is
+              requested. Future donations must settle directly to the church
+              through its approved provider.
             </p>
           </section>
           <Link

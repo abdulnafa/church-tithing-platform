@@ -22,6 +22,8 @@ select extensions.is(
         'recurring_gifts',
         'donations',
         'prayer_requests',
+        'prayer_request_consent_versions',
+        'prayer_request_review_requests',
         'receipts',
         'annual_statements',
         'statement_donations',
@@ -33,8 +35,8 @@ select extensions.is(
         'audit_logs'
       ])
   ),
-  20::bigint,
-  'all 20 application tables exist'
+  22::bigint,
+  'all 22 baseline and P16-sensitive application tables exist'
 );
 
 select extensions.is(
@@ -55,6 +57,8 @@ select extensions.is(
         'recurring_gifts',
         'donations',
         'prayer_requests',
+        'prayer_request_consent_versions',
+        'prayer_request_review_requests',
         'receipts',
         'annual_statements',
         'statement_donations',
@@ -67,8 +71,8 @@ select extensions.is(
       ])
       and c.relrowsecurity
   ),
-  20::bigint,
-  'RLS is enabled on every application table'
+  22::bigint,
+  'RLS is enabled on every baseline and P16-sensitive application table'
 );
 
 select extensions.is(
@@ -89,6 +93,8 @@ select extensions.is(
         'recurring_gifts',
         'donations',
         'prayer_requests',
+        'prayer_request_consent_versions',
+        'prayer_request_review_requests',
         'receipts',
         'annual_statements',
         'statement_donations',

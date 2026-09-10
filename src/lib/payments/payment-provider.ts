@@ -45,7 +45,6 @@ export interface CreateCheckoutSessionInput {
   readonly frequency: GivingFrequency;
   readonly donor: CheckoutDonor;
   readonly message: string | null;
-  readonly prayerRequest: string | null;
   readonly savePaymentMethod: boolean;
   readonly successUrl: string;
   readonly cancelUrl: string;
