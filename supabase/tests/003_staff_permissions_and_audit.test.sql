@@ -427,8 +427,8 @@ select extensions.is(
       )
       and cmd = 'SELECT'
   ),
-  14::bigint,
-  'fourteen non-prayer P07 policies remain read-only after P16 closes direct prayer access'
+  13::bigint,
+  'thirteen direct P07 read policies remain after P17 moves QR reads behind RPCs'
 );
 
 -- Exact role matrix (19-22).
@@ -581,7 +581,13 @@ set local role authenticated;
 select extensions.is((select count(id) from public.churches), 1::bigint, 'staff sees the basic church workspace');
 select extensions.is((select count(id) from public.funds), 1::bigint, 'staff sees funds');
 select extensions.is((select count(id) from public.campaigns), 1::bigint, 'staff sees campaigns');
-select extensions.is((select count(church_id) from public.qr_links), 1::bigint, 'staff sees the permanent QR record');
+select extensions.is(
+  (select count(*) from public.get_church_qr_snapshot(
+    '00000000-0000-4000-8000-000000000821'
+  )),
+  1::bigint,
+  'staff qr_read permission reaches the minimum permanent QR snapshot'
+);
 select extensions.is((select count(id) from public.donations), 0::bigint, 'staff cannot read donation rows');
 select extensions.throws_like(
   $$select * from public.get_prayer_request_queue(

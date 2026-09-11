@@ -48,13 +48,22 @@ Each environment must use different Supabase, payment-provider, Stripe, email, a
 
 Every tenant-owned row carries a non-null `church_id`. Access is enforced in both application authorization and Supabase Row Level Security (RLS).
 
-Suggested public routes:
+Target public routes after the final domain and wildcard DNS are approved:
 
 - `https://{church-slug}.{platform-domain}/` — church giving home
 - `https://{church-slug}.{platform-domain}/give/{fund-or-campaign-slug}` — selected giving destination
 - `https://{platform-domain}/q/{public-qr-id}` — stable QR resolver that redirects to the current church subdomain
 
 The QR should encode the stable resolver URL, not a mutable subdomain. This preserves already printed QR codes if a church slug or platform domain mapping changes.
+
+P17 uses a conservative pre-domain routing boundary:
+
+- `/q/{public-qr-id}` resolves the active QR and active church at request time and issues a temporary same-origin redirect to `/give/{current-church-slug}`;
+- `/give/{church-slug}` remains the supported public giving route on local, preview, and production hosts;
+- request `Host` and `X-Forwarded-Host` values are not used as tenant identity, and `PLATFORM_ROOT_DOMAIN` does not enable a wildcard rewrite;
+- missing, malformed, inactive, suspended, and otherwise unavailable QR targets share a neutral not-found result, while infrastructure failures use a separate generic retry surface;
+- the infrastructure retry surface is an intentionally rendered App Router page and is not represented as an HTTP 503 contract; and
+- subdomain activation remains blocked until the client supplies the final platform domain and its exact root/wildcard DNS configuration is allow-listed and verified. The path route must remain available as a safe fallback when that later mapping is introduced.
 
 Suggested authenticated route groups:
 
@@ -209,4 +218,3 @@ Barbados receipt/statement/TAMIS fields and manual cash/cheque inclusion must be
 7. **Hardening and pilot:** authorization tests, webhook replay tests, reconciliation, accessibility, performance, policies, sandbox and live smoke tests.
 
 The selected local gateway is on the critical path for steps 5–7, but it does not block foundation and product UI work.
-

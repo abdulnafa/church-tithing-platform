@@ -4,7 +4,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChurchPermission } from "@/lib/auth/permissions";
 import { CHURCH_PERMISSION_VALUES } from "@/lib/auth/permissions";
 
-const { requireChurchPermissionMock } = vi.hoisted(() => ({
+const {
+  createServerSupabaseClientMock,
+  getChurchQrSnapshotMock,
+  getPublicAppUrlMock,
+  isVercelPreviewEnvironmentMock,
+  requireChurchPermissionMock,
+} = vi.hoisted(() => ({
+  createServerSupabaseClientMock: vi.fn(),
+  getChurchQrSnapshotMock: vi.fn(),
+  getPublicAppUrlMock: vi.fn(),
+  isVercelPreviewEnvironmentMock: vi.fn(),
   requireChurchPermissionMock: vi.fn(),
 }));
 
@@ -12,19 +22,40 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth/guards", () => ({
   requireChurchPermission: requireChurchPermissionMock,
 }));
+vi.mock("@/lib/supabase/server", () => ({
+  createServerSupabaseClient: createServerSupabaseClientMock,
+}));
+vi.mock("@/lib/qr-routing-dal", () => ({
+  getChurchQrSnapshot: getChurchQrSnapshotMock,
+}));
+vi.mock("@/lib/public-app-url", () => ({
+  getPublicAppUrl: getPublicAppUrlMock,
+  isLocalAppUrl: (value: string) => value.startsWith("http://localhost"),
+  isVercelPreviewEnvironment: isVercelPreviewEnvironmentMock,
+  parsePublicAppOrigin: (value: string) => {
+    try {
+      return new URL(value).origin;
+    } catch {
+      return null;
+    }
+  },
+}));
 
 import ChurchDashboardPage from "./page";
 
 const CHURCH_ID = "10000000-0000-4000-8000-000000000001";
 
-function usePermissions(permissions: readonly ChurchPermission[]) {
+function usePermissions(
+  permissions: readonly ChurchPermission[],
+  churchStatus: "active" | "onboarding" = "active",
+) {
   const workspace = {
     key: `church:${CHURCH_ID}`,
     kind: "church" as const,
     churchId: CHURCH_ID,
     membershipId: "40000000-0000-4000-8000-000000000001",
     churchSlug: "harbour-grace",
-    churchStatus: "active" as const,
+    churchStatus,
     role: "owner" as const,
     permissions,
     displayName: "Harbour Grace Church",
@@ -50,6 +81,18 @@ async function renderOverview() {
 describe("church overview permission rendering", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    createServerSupabaseClientMock.mockResolvedValue({ kind: "client" });
+    getChurchQrSnapshotMock.mockResolvedValue({
+      ok: true,
+      snapshot: {
+        churchId: CHURCH_ID,
+        churchSlug: "harbour-grace",
+        shortCode: "hgc-7v2q9mx4",
+        isActive: true,
+      },
+    });
+    getPublicAppUrlMock.mockReturnValue("https://giving.example");
+    isVercelPreviewEnvironmentMock.mockReturnValue(false);
   });
 
   it("preserves every overview widget and action for an owner grant", async () => {
@@ -113,6 +156,8 @@ describe("church overview permission rendering", () => {
     expect(markup).not.toContain("Recurring members");
     expect(markup).not.toContain("Full report");
     expect(markup).not.toContain("Export CSV");
+    expect(createServerSupabaseClientMock).not.toHaveBeenCalled();
+    expect(getChurchQrSnapshotMock).not.toHaveBeenCalled();
   });
 
   it("separates report navigation from report export", async () => {
@@ -131,5 +176,61 @@ describe("church overview permission rendering", () => {
       "reports_export",
     ]);
     expect(await renderOverview()).toContain("Export CSV");
+  });
+
+  it("renders the persisted church QR without static demo routing data", async () => {
+    usePermissions(["workspace_read", "qr_read"]);
+
+    const markup = await renderOverview();
+
+    expect(getChurchQrSnapshotMock).toHaveBeenCalledWith(
+      { kind: "client" },
+      CHURCH_ID,
+    );
+    expect(markup).toContain("https://giving.example/q/hgc-7v2q9mx4");
+    expect(markup).toContain('href="/give/harbour-grace"');
+    expect(markup).toContain("Harbour Grace Church");
+    expect(markup).toContain("Preview validation only");
+  });
+
+  it("renders a non-downloadable QR state when the resolver is inactive", async () => {
+    usePermissions(["workspace_read", "qr_read"]);
+    getChurchQrSnapshotMock.mockResolvedValue({
+      ok: true,
+      snapshot: {
+        churchId: CHURCH_ID,
+        churchSlug: "harbour-grace",
+        shortCode: "hgc-7v2q9mx4",
+        isActive: false,
+      },
+    });
+
+    const markup = await renderOverview();
+
+    expect(markup).toContain("QR preview unavailable");
+    expect(markup).toContain("resolver is currently inactive");
+    expect(markup).not.toContain("Download SVG");
+  });
+
+  it("keeps an onboarding workspace's reserved QR and giving link unavailable", async () => {
+    usePermissions(["workspace_read", "qr_read"], "onboarding");
+
+    const markup = await renderOverview();
+
+    expect(markup).toContain("QR preview unavailable");
+    expect(markup).toContain("remains unavailable until church activation");
+    expect(markup).toContain("Unavailable until activation");
+    expect(markup).not.toContain("Download SVG");
+    expect(markup).not.toContain('href="/give/harbour-grace"');
+  });
+
+  it("shows a promotion warning for QR artwork in Vercel Preview", async () => {
+    usePermissions(["workspace_read", "qr_read"]);
+    isVercelPreviewEnvironmentMock.mockReturnValue(true);
+
+    const markup = await renderOverview();
+
+    expect(markup).toContain("Preview deployment configuration");
+    expect(markup).toContain("until this release is promoted");
   });
 });

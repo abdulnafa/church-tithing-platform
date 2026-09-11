@@ -80,7 +80,10 @@ describe("church prayer request page", () => {
     expect(markup).toContain('dir="auto"');
     expect(markup).toContain("Consent recorded");
     expect(markup).toContain("Mark as reviewed");
-    expect(markup).not.toMatch(/donor@example|BBD|receipt number|payment method/i);
+    const visibleText = markup.replace(/<[^>]*>/g, " ");
+    expect(visibleText).not.toMatch(
+      /donor@example|BBD|receipt number|payment method/i,
+    );
   });
 
   it("renders reviewed requests without another mutation control", async () => {

@@ -4,6 +4,7 @@ import { DownloadIcon } from "@/components/icons";
 type GivingQrProps = {
   value: string;
   churchName: string;
+  churchSlug: string;
 };
 
 function createQrArtwork(value: string) {
@@ -30,7 +31,7 @@ function createQrArtwork(value: string) {
   };
 }
 
-export function GivingQr({ value, churchName }: GivingQrProps) {
+export function GivingQr({ value, churchName, churchSlug }: GivingQrProps) {
   const artwork = createQrArtwork(value);
 
   return (
@@ -49,7 +50,7 @@ export function GivingQr({ value, churchName }: GivingQrProps) {
       </div>
       <a
         className="focus-ring mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[var(--line)] bg-white px-4 py-3 text-[10px] font-bold text-[var(--ink)] transition hover:border-[var(--sage)]"
-        download="harbour-grace-giving-qr.svg"
+        download={`${churchSlug}-giving-qr.svg`}
         href={artwork.downloadUrl}
       >
         <DownloadIcon size={15} /> Download SVG

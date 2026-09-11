@@ -1,5 +1,6 @@
 import "server-only";
 
+import { isPublicChurchSlug } from "@/lib/public-church-routing";
 import { getSupabasePublicConfig } from "@/lib/supabase/config";
 import { createPublicServerSupabaseClient } from "@/lib/supabase/public-server";
 
@@ -17,7 +18,6 @@ type RpcResponse = Readonly<{ data: unknown; error: unknown }>;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const HEX_COLOR_PATTERN = /^#[0-9A-F]{6}$/;
 const SINGLE_LINE_CONTROL_PATTERN = /[\u0000-\u001f\u007f]/;
 const MULTILINE_CONTROL_PATTERN = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
@@ -61,12 +61,7 @@ function isSafeOptionalMultilineText(
 }
 
 export function isPublicGivingSlug(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.length >= 2 &&
-    value.length <= 63 &&
-    SLUG_PATTERN.test(value)
-  );
+  return isPublicChurchSlug(value);
 }
 
 function isUuid(value: unknown): value is string {

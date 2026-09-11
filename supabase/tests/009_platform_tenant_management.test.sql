@@ -188,7 +188,13 @@ set local role authenticated;
 select extensions.is((select count(*) from public.platform_admins), 1::bigint, 'super administrator direct identity read is self-only');
 select extensions.is((select count(*) from public.churches where id between '82000000-0000-4000-8000-000000002101' and '82000000-0000-4000-8000-000000002105'), 0::bigint, 'super administrator cannot read direct fixture church rows');
 select extensions.is((select count(*) from public.funds where church_id between '82000000-0000-4000-8000-000000002101' and '82000000-0000-4000-8000-000000002105'), 0::bigint, 'super administrator cannot read direct fixture funds');
-select extensions.is((select count(*) from public.qr_links where church_id between '82000000-0000-4000-8000-000000002101' and '82000000-0000-4000-8000-000000002105'), 0::bigint, 'super administrator cannot read direct fixture QR rows');
+select extensions.throws_like(
+  $$select church_id from public.qr_links
+    where church_id between '82000000-0000-4000-8000-000000002101'
+                        and '82000000-0000-4000-8000-000000002105'$$,
+  '%permission denied%',
+  'super administrator cannot read direct fixture QR rows'
+);
 select extensions.is((select count(*) from public.platform_subscriptions where church_id='82000000-0000-4000-8000-000000002101'), 0::bigint, 'super administrator cannot read subscription state');
 select extensions.is((select count(*) from public.payment_provider_connections where church_id='82000000-0000-4000-8000-000000002101'), 0::bigint, 'super administrator cannot read provider state');
 select extensions.is((select count(*) from public.donations where church_id='82000000-0000-4000-8000-000000002101'), 0::bigint, 'super administrator has no donor-financial bypass');

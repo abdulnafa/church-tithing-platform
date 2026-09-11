@@ -142,6 +142,7 @@ Production church merchant credentials must be tenant-scoped and encrypted or co
 - Historical donations retain their original amount, currency, category, and provider state.
 - Prayer requests are isolated from accounting data and excluded from receipts, statements, and financial exports.
 - Stable QR resolver URLs protect printed QR codes from future church-slug changes.
+- QR resolution is request-time and temporarily redirects only to a validated same-origin `/give/{church-slug}` path. Arbitrary request hosts never select a tenant; subdomain rewriting stays disabled until the final platform domain and wildcard DNS are approved and explicitly configured.
 - Unsupported gateway capabilities are disabled in the UI rather than simulated.
 
 ## Expected high-level structure
@@ -173,7 +174,7 @@ Do not enable production donation checkout until all of the following are comple
 
 ## Deployment
 
-Deploy the Next.js application to a dedicated Vercel project and use a dedicated Supabase project. Configure separate Preview and Production variables, register environment-specific webhook endpoints, and verify the wildcard subdomain/DNS plan before issuing production QR codes. Vercel's production URL is used as a safe fallback when `NEXT_PUBLIC_APP_URL` is unset; set `NEXT_PUBLIC_APP_URL` explicitly to the approved custom domain before printing permanent QR codes.
+Deploy the Next.js application to a dedicated Vercel project and use a dedicated Supabase project. Configure separate Preview and Production variables, register environment-specific webhook endpoints, and verify the wildcard subdomain/DNS plan before issuing production QR codes. Vercel's production URL is used as a safe fallback when `NEXT_PUBLIC_APP_URL` is unset; set `NEXT_PUBLIC_APP_URL` to an approved origin-only HTTPS URL before printing permanent QR codes. Paths, credentials, query strings, fragments, wildcard hosts, and non-loopback HTTP origins are rejected.
 
 At minimum, run before release:
 

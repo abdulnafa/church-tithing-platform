@@ -12,18 +12,26 @@ import {
   createChurchTransactionFundOptions,
   createChurchTransactionRows,
 } from "@/lib/church-transaction-view";
-import { getPublicAppUrl, isLocalAppUrl } from "@/lib/public-app-url";
+import {
+  getPublicAppUrl,
+  isLocalAppUrl,
+  isVercelPreviewEnvironment,
+} from "@/lib/public-app-url";
+import {
+  createPublicGivingPath,
+  createPublicQrUrl,
+} from "@/lib/public-church-routing";
+import { getChurchQrSnapshot } from "@/lib/qr-routing-dal";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   calculateProgress,
   demoCampaigns,
-  demoChurch,
   demoDonations,
   demoFundBreakdown,
   demoFunds,
   demoGivingSummary,
   demoGivingTrend,
   demoMembers,
-  demoQrCode,
   demoRecurringGifts,
   formatMoney,
   formatPercentage,
@@ -41,8 +49,13 @@ export default async function ChurchDashboardPage() {
   const maximumTrend = visibility.givingTrend
     ? Math.max(...demoGivingTrend.map((point) => point.total.amountMinor))
     : 0;
-  const appUrl = visibility.givingQr ? getPublicAppUrl() : "";
-  const givingUrl = visibility.givingQr ? `${appUrl}/q/${demoQrCode}` : "";
+  const publicGivingPath = createPublicGivingPath(workspace.churchSlug);
+  const givingQr = visibility.givingQr
+    ? await loadOverviewGivingQr(
+        workspace.churchId,
+        workspace.churchStatus,
+      )
+    : null;
   const netGiving = visibility.givingTrend
     ? demoDonations.reduce(
         (sum, donation) => sum + donation.netAmount.amountMinor,
@@ -68,9 +81,9 @@ export default async function ChurchDashboardPage() {
         <section className="mb-6 flex flex-col gap-4 overflow-hidden rounded-[22px] bg-[var(--ink)] p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[#2f796b] text-white"><CheckIcon size={19} /></span>
-            <div><p className="text-sm font-bold">Giving-page preview is ready</p><p className="mt-1 max-w-2xl text-xs leading-5 text-white/55">{visibility.providerStatus ? "This workspace uses demo data. Live checkout stays locked until the church's Barbados merchant connection is verified." : "Preview the public giving experience while this workspace uses shared demo data."}</p></div>
+            <div><p className="text-sm font-bold">Giving-page preview</p><p className="mt-1 max-w-2xl text-xs leading-5 text-white/75">{visibility.providerStatus ? "Review this church's giving-page path. Live checkout stays locked until its Barbados merchant connection is verified." : "Review this church's public giving-page path while the remaining dashboard figures use shared demo data."}</p></div>
           </div>
-          <Link className="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-bold !text-[#122235]" href={`/give/${demoChurch.slug}`}>Preview giving page <ArrowRightIcon size={15} /></Link>
+          {publicGivingPath && workspace.churchStatus === "active" ? <Link className="focus-ring inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-bold !text-[#122235]" href={publicGivingPath}>Preview giving page <ArrowRightIcon size={15} /></Link> : <span className="rounded-full border border-white/15 px-4 py-2 text-[10px] font-bold text-white/80">Unavailable until activation</span>}
         </section>
 
         {visibility.financialSummary || visibility.registeredMembers ? (
@@ -178,13 +191,22 @@ export default async function ChurchDashboardPage() {
           <aside className="space-y-6">
             {visibility.givingQr ? (
               <section className="soft-card rounded-[22px] p-5 sm:p-6" id="qr">
-              <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/qr">Open →</Link>} eyebrow="Sunday ready" title="Giving QR code" />
-              <p className="mt-2 text-xs leading-5 text-[var(--muted)]">One permanent code for your giving homepage. Download it for screens and print.</p>
-              <div className="mt-5 rounded-[22px] bg-[#eeece5] p-5 text-center">
-                <GivingQr churchName={demoChurch.name} value={givingUrl} />
-              </div>
-              <p className="mt-3 break-all text-center text-[9px] text-[var(--muted)]">{givingUrl}</p>
-              {isLocalAppUrl(appUrl) && <p className="mt-2 rounded-xl bg-[var(--gold-pale)] px-3 py-2 text-center text-[10px] leading-4 text-[#8a641f]">Local preview QR. Set NEXT_PUBLIC_APP_URL to the approved public domain before printing.</p>}
+              <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/qr">Open →</Link>} eyebrow="Permanent giving link" title="Giving QR code" />
+              <p className="mt-2 text-xs leading-5 text-[var(--ink-soft)]">One stable resolver code for this church&apos;s current giving-page path.</p>
+              {givingQr?.state === "enabled" ? (
+                <>
+                  <div className="mt-5 rounded-[22px] bg-[#eeece5] p-5 text-center">
+                    <GivingQr churchName={workspace.displayName} churchSlug={givingQr.churchSlug} value={givingQr.url} />
+                  </div>
+                  <p className="mt-3 break-all text-center text-[9px] text-[var(--ink-soft)]">{givingQr.url}</p>
+                  <p className="mt-2 rounded-xl bg-[var(--gold-pale)] px-3 py-2 text-center text-[10px] leading-4 text-[#76521b]">{isVercelPreviewEnvironment() ? "Preview deployment configuration — do not print until this release is promoted and the approved origin is verified." : isLocalAppUrl(givingQr.appUrl) ? "Local preview QR. Set NEXT_PUBLIC_APP_URL to the approved public origin before printing." : "Preview validation only. Do not publish or print until the final platform domain and DNS are approved."}</p>
+                </>
+              ) : (
+                <div className="mt-5 rounded-[22px] border border-[var(--line)] bg-[#eeece5] p-5 text-center" role="status">
+                  <p className="text-xs font-bold">QR preview unavailable</p>
+                  <p className="mt-2 text-[10px] leading-5 text-[var(--ink-soft)]">{givingQr?.state === "inactive" ? givingQr.message : "The saved QR details could not be loaded. Open the QR page and try again."}</p>
+                </div>
+              )}
               </section>
             ) : null}
 
@@ -233,4 +255,52 @@ export default async function ChurchDashboardPage() {
         </div>
     </div>
   );
+}
+
+type OverviewGivingQr =
+  | Readonly<{
+      state: "enabled";
+      appUrl: string;
+      churchSlug: string;
+      url: string;
+    }>
+  | Readonly<{ state: "inactive"; message: string }>
+  | Readonly<{ state: "unavailable" }>;
+
+async function loadOverviewGivingQr(
+  churchId: string,
+  churchStatus: "onboarding" | "active",
+): Promise<OverviewGivingQr> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const result = await getChurchQrSnapshot(supabase, churchId);
+    if (!result.ok) return { state: "unavailable" };
+
+    if (churchStatus !== "active") {
+      return {
+        state: "inactive",
+        message:
+          "The stable QR is reserved, but its public resolver remains unavailable until church activation.",
+      };
+    }
+    if (!result.snapshot.isActive) {
+      return {
+        state: "inactive",
+        message: "The permanent QR resolver is currently inactive.",
+      };
+    }
+
+    const appUrl = getPublicAppUrl();
+    const url = createPublicQrUrl(appUrl, result.snapshot.shortCode);
+    if (!url) return { state: "unavailable" };
+
+    return {
+      state: "enabled",
+      appUrl,
+      churchSlug: result.snapshot.churchSlug,
+      url,
+    };
+  } catch {
+    return { state: "unavailable" };
+  }
 }

@@ -2269,6 +2269,15 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_church_qr_snapshot: {
+        Args: { target_church_id: string }
+        Returns: {
+          church_id: string
+          church_slug: string
+          is_active: boolean
+          short_code: string
+        }[]
+      }
       get_church_settings: {
         Args: { target_church_id: string }
         Returns: Database["public"]["CompositeTypes"]["church_settings_snapshot"]
@@ -2505,6 +2514,12 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      resolve_public_qr: {
+        Args: { target_short_code: string }
+        Returns: {
+          church_slug: string
+        }[]
       }
       review_prayer_request: {
         Args: {
