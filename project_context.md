@@ -1,8 +1,8 @@
 # Church Digital Tithing Platform - Project Context
 
-Last updated: 11 September 2026
+Last updated: 12 September 2026
 Repository: `church-tithing-platform`
-Current phase: P17 database-backed QR resolution and routing complete; P18 giving-flow implementation is next
+Current phase: P17 database-backed QR resolution and routing complete; preview access and visual QA remediation is in progress; P18 giving-flow implementation is next
 Public production alias (unchanged): https://church-tithing-platform-3k2j.vercel.app/
 Latest non-production preview branch: https://github.com/abdulnafa/church-tithing-platform/tree/codex/p17-preview-20260911
 
@@ -34,6 +34,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Current delivery target
 
+- `[IN PROGRESS]` On 12 September 2026, preview access and route-level visual QA remediation began after client review found unreadable link-button text and the deployed public giving page could not load its development data. Scope is limited to the Church Tithing non-production preview; production and all unrelated projects remain unchanged.
 - `[COMPLETE]` On 9 September 2026, P15 was completed and verified: church-scoped donor profiles, required guest identity fields, authenticated profile updates, and a conservative privacy-safe guest/member boundary that never claims prior guest financial history by email alone while the detailed client linking policy remains pending.
 - `[COMPLETE]` On 10 September 2026, P16 completed a conservative privacy-safe prayer-request foundation: local-only public draft and provisional consent controls, an owner-only minimum review queue, one-way audited review-state changes, and strict application/projection separation from financial and payment data. Public prayer requests are not submitted or stored yet, and live payment submission remains disabled.
 - `[COMPLETE]` On 11 September 2026, P17 replaced the static QR demo resolver and dashboard widgets with tenant-safe persisted QR resolution, while retaining the current path-based giving route and leaving final domain/subdomain activation pending rather than inventing client decisions.
