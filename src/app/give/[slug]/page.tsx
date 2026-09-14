@@ -7,6 +7,7 @@ import { cache } from "react";
 import { ChurchMark } from "@/components/brand";
 import { GivingForm } from "@/components/giving-form";
 import { ArrowRightIcon, HeartIcon, ShieldIcon } from "@/components/icons";
+import { PRODUCT_NAME } from "@/lib/branding";
 import { formatCampaignMinorAmount } from "@/lib/church-campaigns";
 import { getPublicGivingPageBySlug } from "@/lib/public-giving-dal";
 import type {
@@ -167,7 +168,7 @@ export default async function GivingPage({ params }: GivingPageProps) {
         </aside>
       </div>
       <footer className="border-t border-[var(--line)] bg-[var(--paper)] px-5 py-6 text-center text-[10px] text-[var(--ink-soft)]">
-        Powered by Kindred Giving - Digital giving for churches
+        Powered by {PRODUCT_NAME} - Digital giving for churches
       </footer>
     </main>
   );

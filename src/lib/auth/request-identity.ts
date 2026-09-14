@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { createPublicServerSupabaseClient } from "@/lib/supabase/public-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/supabase/database.types";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 import type { RequestIdentity } from "./identity-types";
 import { getMyChurchPermissions } from "./permission-rpc";
@@ -188,7 +189,7 @@ export async function resolveRequestIdentity(
     return { state: "setup_required", userId: subject };
   }
 
-  const displayName = profileResponse.data.display_name ?? "Kindred user";
+  const displayName = profileResponse.data.display_name ?? `${PRODUCT_NAME} user`;
 
   if (!profileResponse.data.is_active) {
     return { state: "inactive", userId: subject, displayName };

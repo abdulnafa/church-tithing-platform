@@ -3,11 +3,12 @@ import { redirect } from "next/navigation";
 
 import { AuthPageShell } from "@/components/auth-page-shell";
 import { UpdatePasswordForm } from "@/components/password-reset-forms";
+import { PRODUCT_NAME } from "@/lib/branding";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Choose a new password",
-  description: "Choose a new password for your Kindred Giving account.",
+  description: `Choose a new password for your ${PRODUCT_NAME} account.`,
 };
 
 export default async function ResetPasswordPage() {

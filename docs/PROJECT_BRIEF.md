@@ -1,4 +1,4 @@
-# Church Digital Tithing Platform — Project Brief
+# churchwithease — Project Brief
 
 **Status:** In development / coming soon  
 **Target:** Controlled pilot by mid-September 2026  
@@ -111,7 +111,8 @@ The Barbados gateway has not yet been selected. Real checkout and recurring-paym
 - Each church has one permanent downloadable QR code.
 - The QR resolves to that church's giving home page, where donors choose a fund or campaign.
 - The QR is not custom-designed in v1.
-- Final platform name, logo, colors, primary domain, and reference screenshots are pending. Placeholder branding is permitted during development.
+- The platform name `churchwithease` was approved on 14 September 2026.
+- The custom logo, final colors, primary domain, tagline, and reference screenshots are pending; the existing symbol and palette remain in use until those assets arrive.
 
 ## 9. Technology decisions
 
@@ -137,7 +138,7 @@ To keep the first release simple and achievable, work proceeds with these assump
 - manually provisioned church account;
 - English only;
 - responsive web only, with no native mobile app;
-- placeholder platform branding until final assets arrive;
+- approved `churchwithease` name with the existing symbol and palette until final brand assets arrive;
 - payment screens use a mock/test adapter until the real provider is approved and accessible.
 
 These are implementation assumptions, not permission to launch real payments without provider validation.
@@ -174,4 +175,3 @@ The pilot is ready only when:
 - church staff can manage funds/campaigns and export accurate reports;
 - Super Admin can manage tenant access and SaaS billing state;
 - privacy, terms, refund/chargeback operations, and Barbados reporting requirements are approved before public launch.
-

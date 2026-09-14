@@ -54,11 +54,26 @@ describe("local Supabase Auth configuration", () => {
   });
 
   it("routes local confirmation and recovery emails through token-hash callbacks", () => {
-    expect(section("auth.email.template.confirmation")).toContain(
+    const confirmation = section("auth.email.template.confirmation");
+    const recovery = section("auth.email.template.recovery");
+
+    expect(confirmation).toContain(
       'content_path = "./supabase/templates/confirmation.html"',
     );
-    expect(section("auth.email.template.recovery")).toContain(
+    expect(confirmation).toContain(
+      'subject = "Confirm your churchwithease email"',
+    );
+    expect(recovery).toContain(
       'content_path = "./supabase/templates/recovery.html"',
+    );
+    expect(recovery).toContain(
+      'subject = "Reset your churchwithease password"',
+    );
+    expect(confirmationTemplate).toContain(
+      "Confirm your churchwithease email",
+    );
+    expect(recoveryTemplate).toContain(
+      "Reset your churchwithease password",
     );
     expect(confirmationTemplate).toContain(
       "/auth/confirm?token_hash={{ .TokenHash }}&amp;type=signup",
@@ -68,5 +83,8 @@ describe("local Supabase Auth configuration", () => {
     );
     expect(confirmationTemplate).not.toContain("{{ .ConfirmationURL }}");
     expect(recoveryTemplate).not.toContain("{{ .ConfirmationURL }}");
+    expect(`${confirmation}${recovery}${confirmationTemplate}${recoveryTemplate}`).not.toContain(
+      "Kindred Giving",
+    );
   });
 });

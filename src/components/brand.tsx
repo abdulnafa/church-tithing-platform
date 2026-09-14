@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { PRODUCT_NAME } from "@/lib/branding";
+
 type BrandProps = {
   compact?: boolean;
   href?: string;
@@ -16,11 +18,11 @@ export function Brand({ compact = false, href = "/", inverted = false }: BrandPr
           <path d="M16 20c5.8 0 9-3.1 9-8-5.8 0-9 3.1-9 8Z" fill="currentColor" opacity=".58" />
         </svg>
       </span>
-      {compact && <span className="sr-only">Kindred Giving home</span>}
+      {compact && <span className="sr-only">{PRODUCT_NAME} home</span>}
       {!compact && (
         <span className="leading-none">
-          <span className={`block text-[17px] font-bold tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>Kindred</span>
-          <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.2em] ${inverted ? "text-white/60" : "text-[var(--muted)]"}`}>Giving</span>
+          <span className={`block text-[15px] font-bold tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>churchwith</span>
+          <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.2em] ${inverted ? "text-white/60" : "text-[var(--muted)]"}`}>ease</span>
         </span>
       )}
     </Link>

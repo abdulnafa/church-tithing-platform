@@ -8,12 +8,13 @@ import {
   resolvePostAuthDestination,
   WORKSPACE_COOKIE_NAME,
 } from "@/lib/auth/workspaces";
+import { PRODUCT_NAME } from "@/lib/branding";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
   title: "Sign in",
-  description: "Sign in securely to your Kindred Giving portal.",
+  description: `Sign in securely to your ${PRODUCT_NAME} portal.`,
 };
 
 type LoginSearchParams = Promise<{

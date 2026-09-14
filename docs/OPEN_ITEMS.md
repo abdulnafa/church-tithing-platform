@@ -204,16 +204,20 @@ Default to least privilege until approved.
 
 ### 16. Final identity and URLs
 
+Resolved:
+
+- platform name: `churchwithease`, approved on 14 September 2026.
+
 Pending:
 
-- final platform name and tagline;
+- final tagline;
 - logo and brand palette;
 - primary domain;
 - church subdomain format and slug ownership;
 - desired behavior when a slug changes;
 - reference screenshots/designs.
 
-Placeholder branding may be used during development. The QR architecture will use a stable resolver so a slug change does not invalidate printed QR codes.
+The approved `churchwithease` name uses the existing symbol and palette until the remaining assets arrive. The QR architecture uses a stable resolver so a slug change does not invalidate printed QR codes.
 
 ### 17. Launch definition and acceptance
 
@@ -259,4 +263,3 @@ The following work does not depend on the provider selection:
 - reports/CSV foundation and placeholder emails.
 
 Provider-specific checkout, real saved cards, recurring execution, retry behavior, reconciliation, fees/net reporting, and production receipts remain blocked until the selected gateway is validated.
-

@@ -3,10 +3,11 @@ import Link from "next/link";
 
 import { AuthPageShell } from "@/components/auth-page-shell";
 import { PasswordResetRequestForm } from "@/components/password-reset-forms";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 export const metadata: Metadata = {
   title: "Reset password",
-  description: "Request a secure Kindred Giving password-reset link.",
+  description: `Request a secure ${PRODUCT_NAME} password-reset link.`,
 };
 
 export default function ForgotPasswordPage() {

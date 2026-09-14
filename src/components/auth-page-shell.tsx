@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { Brand } from "@/components/brand";
 import { CheckIcon, HeartIcon } from "@/components/icons";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 type AuthPageShellProps = Readonly<{
   children: ReactNode;
@@ -53,7 +54,7 @@ export function AuthPageShell({
           </div>
         </div>
         <p className="relative text-[10px] text-white/35">
-          Kindred Giving | Barbados pilot | 2026
+          {PRODUCT_NAME} | Barbados pilot | 2026
         </p>
       </section>
 

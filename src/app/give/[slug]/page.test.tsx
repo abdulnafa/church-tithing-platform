@@ -107,7 +107,11 @@ describe("public giving page", () => {
     expect(markup).toContain("church-logos");
     expect(markup).toContain('data-alt=""');
     expect(markup).toContain("Online payment submission will be available");
+    expect(markup).toContain(
+      "Powered by churchwithease - Digital giving for churches",
+    );
     expect(markup).not.toMatch(/raised|payment is processed|secure provider/i);
+    expect(markup).not.toContain("Kindred Giving");
   });
 
   it("passes a minimum serializable target DTO to the client component", async () => {

@@ -1,4 +1,5 @@
 import type { Enums } from "@/lib/supabase/database.types";
+import { PRODUCT_NAME } from "@/lib/branding";
 
 import type {
   ActiveIdentity,
@@ -256,7 +257,10 @@ export function createShellIdentity(
   identity: ActiveIdentity,
   workspace: Workspace,
 ): ShellIdentity {
-  const displayName = normalizeDisplayName(identity.displayName, "Kindred user");
+  const displayName = normalizeDisplayName(
+    identity.displayName,
+    `${PRODUCT_NAME} user`,
+  );
   const words = displayName.split(SPACE_PATTERN).filter(Boolean);
   const initials = words
     .slice(0, 2)
@@ -265,7 +269,7 @@ export function createShellIdentity(
 
   return {
     displayName,
-    initials: initials || "KG",
+    initials: initials || "CE",
     roleLabel: workspace.roleLabel,
   };
 }

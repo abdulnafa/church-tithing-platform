@@ -359,6 +359,25 @@ describe("safe shell identity", () => {
     });
   });
 
+  it("uses the approved product-name fallback for an unnamed shell identity", () => {
+    const workspace = buildWorkspaces({
+      donors: [],
+      memberships: [
+        { id: MEMBERSHIP_A, church_id: CHURCH_A, role: "finance_admin" },
+      ],
+      donorChurches: [],
+      memberChurches: [churchA],
+      isPlatformSuperAdmin: false,
+    })[0];
+    const identity = { ...activeIdentity([workspace]), displayName: "   " };
+
+    expect(createShellIdentity(identity, workspace)).toEqual({
+      displayName: "churchwithease user",
+      initials: "CU",
+      roleLabel: "Finance Admin",
+    });
+  });
+
   it("sends only the selected church's named permissions to the shell", () => {
     const [workspace] = buildWorkspaces({
       donors: [],

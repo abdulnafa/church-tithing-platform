@@ -1,8 +1,8 @@
-# Church Digital Tithing Platform
+# churchwithease
 
 A mobile-first, multi-church SaaS for QR-based one-time and recurring giving. Donors give without installing an app; churches manage funds, campaigns, donors, receipts, recurring plans, and reports from a tenant-scoped dashboard.
 
-The first market is Barbados, with a controlled pilot targeted for mid-September 2026. The product name and branding are provisional.
+The first market is Barbados, with a controlled pilot targeted for mid-September 2026. The `churchwithease` product name is approved; the custom logo, final palette, and primary domain are still pending.
 
 ## Current status
 

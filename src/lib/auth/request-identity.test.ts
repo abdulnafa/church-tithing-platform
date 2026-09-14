@@ -166,6 +166,25 @@ describe("request identity DAL", () => {
     expect(tables.donors.select).not.toHaveBeenCalled();
   });
 
+  it("uses the approved product-name fallback when a profile has no display name", async () => {
+    const authenticated = createClient(
+      baseAuthenticatedTables({
+        profiles: createQuery({
+          data: { id: USER_ID, display_name: null, is_active: false },
+          error: null,
+        }),
+      }),
+    );
+
+    await expect(
+      resolveRequestIdentity({ authenticatedClient: authenticated.client }),
+    ).resolves.toEqual({
+      state: "inactive",
+      userId: USER_ID,
+      displayName: "churchwithease user",
+    });
+  });
+
   it("uses explicit subject filters and separate clients for staff and donor church details", async () => {
     const tables = baseAuthenticatedTables({
       platform_admins: createQuery({

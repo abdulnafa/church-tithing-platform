@@ -1,8 +1,8 @@
 # Church Digital Tithing Platform - Project Context
 
-Last updated: 12 September 2026
+Last updated: 14 September 2026
 Repository: `church-tithing-platform`
-Current phase: P17, preview visual QA, and Development-only client demo-account provisioning complete; P18 giving-flow implementation is next
+Current phase: approved `churchwithease` product-name rollout and public production-demo launch are in progress; P18 giving-flow implementation remains next afterward
 Public production alias (unchanged): https://church-tithing-platform-3k2j.vercel.app/
 Latest non-production preview branch: https://github.com/abdulnafa/church-tithing-platform/tree/codex/p17-preview-20260911
 
@@ -25,7 +25,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - The platform must never hold, pool, withdraw, or redistribute donation funds.
 - No raw card number, CVC, bank credential, or unencrypted provider secret may be stored by the application.
 - English-only responsive web application for v1; no native mobile app.
-- Final product name, logo, colours, domain, and reference branding are still pending. `Kindred Giving` is placeholder branding.
+- `[COMPLETE]` On 14 September 2026, the client approved `churchwithease` as the product name and authorized making the website live on the existing Church Vercel production URL. No custom domain, logo asset, colour revision, or reference brand was supplied, so the existing symbol and palette remain in place and those assets remain pending.
 
 ## Confirmed communication preference
 
@@ -34,6 +34,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Current delivery target
 
+- Current approved target (14 September 2026): replace the user-visible `Kindred Giving` placeholder with `churchwithease`, verify the public and authenticated surfaces, and publish the exact verified Church build to the existing canonical Church Vercel production alias. This is a public product demo using the currently approved Development-backed demo data; live donations, production payment processing, custom-domain activation, and the separate controlled-pilot go/no-go work remain disabled or pending.
 - `[COMPLETE]` On 12 September 2026, three email-confirmed synthetic client demo accounts were provisioned in the Church Tithing Development Supabase project only: one Platform Super Admin, one Harbour Grace Church Owner, and one Harbour Grace Member. The member was created as a new donor through the audited P15 profile workflow rather than linking an existing guest by email. Exact database role/profile state, real preview sign-in destinations, every permitted protected route, cross-workspace denial, the single-workspace redirect, both permanent public QR routes, rendered page identity, overflow, blank-control, framework-overlay, console, and network health were verified. Credentials were kept out of the repository and are handed off separately; production and all unrelated projects remained unchanged.
 - `[COMPLETE]` On 12 September 2026, the Church-only P17 preview access and visual QA remediation was completed: the global anchor-color override that hid text on white link-buttons and during the header `Sign in` hover was removed; the approved Development Supabase URL and publishable key were scoped to the canonical Church Vercel project's P17 Preview branch only; and anonymous Shareable Link access, both seeded giving pages, 20 desktop/mobile public-route renders, 13 protected app-login redirects, hover/CTA contrast, zero overflow/console/network/framework-overlay issues, 1,393 tests, lint, and the production-mode build were verified. Production and all unrelated projects remained unchanged.
 - `[COMPLETE]` On 9 September 2026, P15 was completed and verified: church-scoped donor profiles, required guest identity fields, authenticated profile updates, and a conservative privacy-safe guest/member boundary that never claims prior guest financial history by email alone while the detailed client linking policy remains pending.
@@ -178,7 +179,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - `[PENDING]` P33 - Add unit, integration, RLS, webhook replay/idempotency, and end-to-end tests for critical financial and authorization flows.
 - `[PENDING]` P34 - Add structured logging, error monitoring, rate limiting, secure upload rules, reconciliation tooling, backup, and tested recovery procedures. Include cleanup for abandoned pre-commit logo objects after a user closes an ambiguous retry, and evaluate privileged server-side upload attestation if the threat model must prevent authorized owners from bypassing application image decoding through direct Storage API calls.
 - `[PENDING]` P35 - Complete accessibility, responsive-browser, performance, email-deliverability, and security review.
-- `[PENDING]` P36 - Apply final product identity, logo, colour palette, primary domain, and subdomain DNS.
+- `[IN PROGRESS]` P36 - Apply the approved `churchwithease` product name to the visible interface and metadata and release the verified build on the existing Church production alias. A custom logo, revised colour palette, primary domain, wildcard DNS, and subdomain routing remain pending because the client has not supplied them.
 - `[PENDING]` P37 - Obtain approved Privacy Policy, Terms of Service, prayer-request consent, refund/chargeback process, data-retention policy, and Barbados receipt/statement/reporting requirements.
 - `[PENDING]` P38 - Provision the confirmed pilot church and execute sandbox acceptance testing with client sign-off.
 - `[PENDING]` P39 - Separate Preview and Production secrets, complete production smoke tests, approve the go/no-go checklist, and launch the controlled pilot.
@@ -192,7 +193,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - `[PENDING]` Staff roles and detailed permission matrix.
 - `[PENDING]` Historical guest-to-account claiming/opt-in, verified email-change synchronization, donor unlink/account deletion/retention, anonymous-giving semantics, phone/address/TIN, recurring-edit/retry, campaign, annual-statement, manual cash/cheque, subscription-failure, and Super Admin authority decisions listed in `docs/OPEN_ITEMS.md`.
 - `[PENDING]` Transactional email provider, sending domain, from/reply-to policy, and recipients.
-- `[PENDING]` The client stated on 7 September 2026 that they expect to provide the final domain, product name, and logo during the same week. Placeholder `Kindred Giving` branding remains until those assets arrive; the final tagline, colours, and any resulting design revisions also remain pending unless included with that handoff.
+- `[COMPLETE]` The client supplied and approved the product name `churchwithease` on 14 September 2026. The custom domain, logo asset, final tagline, colour revisions, and any resulting design revisions remain pending.
 - `[PENDING]` Legal, privacy, consent, refund/dispute, retention, accounting, and Barbados reporting approvals.
 
 ## Confirmed out of scope for v1
@@ -209,4 +210,4 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Next task
 
-`P18 - End-to-end server giving flow` is `[PENDING]` and next. Connect the existing mock provider through server-side validation, pending-donation creation, exact idempotency, hosted-checkout simulation, return handling, and a signed webhook while live payments remain disabled. Prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
+`P36 - churchwithease product-name rollout and existing-alias production-demo release` is `[IN PROGRESS]`. After it is verified and complete, `P18 - End-to-end server giving flow` remains next. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
