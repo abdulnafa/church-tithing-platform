@@ -20,9 +20,8 @@ export function Brand({ compact = false, href = "/", inverted = false }: BrandPr
       </span>
       {compact && <span className="sr-only">{PRODUCT_NAME} home</span>}
       {!compact && (
-        <span className="leading-none">
-          <span className={`block text-[15px] font-bold tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>churchwith</span>
-          <span className={`mt-1 block text-[10px] font-semibold uppercase tracking-[0.2em] ${inverted ? "text-white/60" : "text-[var(--muted)]"}`}>ease</span>
+        <span className={`whitespace-nowrap text-[15px] font-bold leading-none tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>
+          {PRODUCT_NAME}
         </span>
       )}
     </Link>

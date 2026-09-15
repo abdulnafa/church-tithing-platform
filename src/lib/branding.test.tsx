@@ -18,8 +18,10 @@ describe("product branding", () => {
   it("renders the approved full wordmark without the retired placeholder", () => {
     const markup = renderToStaticMarkup(<Brand />);
 
-    expect(markup).toContain(">churchwith</span>");
-    expect(markup).toContain(">ease</span>");
+    expect(markup).toContain(`>${PRODUCT_NAME}</span>`);
+    expect(markup).not.toContain(">churchwith</span>");
+    expect(markup).not.toContain(">ease</span>");
+    expect(markup).not.toContain("uppercase");
     expect(markup).not.toMatch(/Kindred Giving|>Kindred<|>Giving</);
   });
 

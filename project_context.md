@@ -1,8 +1,8 @@
 # Church Digital Tithing Platform - Project Context
 
-Last updated: 14 September 2026
+Last updated: 15 September 2026
 Repository: `church-tithing-platform`
-Current phase: approved `churchwithease` product-name rollout and public production-demo launch are complete; P18 giving-flow implementation is next
+Current phase: P36 single-line `churchwithease` wordmark correction is in progress; P18 giving-flow implementation remains next
 Public production alias (unchanged): https://church-tithing-platform-3k2j.vercel.app/
 Latest non-production preview branch: https://github.com/abdulnafa/church-tithing-platform/tree/codex/p17-preview-20260911
 
@@ -180,6 +180,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - `[PENDING]` P34 - Add structured logging, error monitoring, rate limiting, secure upload rules, reconciliation tooling, backup, and tested recovery procedures. Include cleanup for abandoned pre-commit logo objects after a user closes an ambiguous retry, and evaluate privileged server-side upload attestation if the threat model must prevent authorized owners from bypassing application image decoding through direct Storage API calls.
 - `[PENDING]` P35 - Complete accessibility, responsive-browser, performance, email-deliverability, and security review.
 - `[COMPLETE]` P36 - On 14 September 2026, replaced the user-visible `Kindred Giving` placeholder with the exact lowercase product name `churchwithease` across shared branding, page metadata, authentication copy, giving-page attribution, email-template source, fallback identity copy, and the generated browser icon while preserving stable internal request and workspace identifiers. Commit `aa0ab33fa6e3fda7d129f4343fae6e62cf24cb1c` passed 1,398/1,398 tests, ESLint, the Next.js production build, desktop 1440x900 and mobile 390x844 browser QA, header-hover contrast, both public giving pages, both permanent QR redirects, and the complete Member, Church Owner, and Platform Admin allow/deny route matrix. The canonical Church-only Production build `dpl_FwqkBDouceZbdjCWTkbqDnTysL7T` reached `READY` and now serves https://church-tithing-platform-3k2j.vercel.app/ publicly without Vercel login. Its first 30-minute post-launch request-log scan returned zero error/fatal requests and zero 5xx responses. Two encrypted Production-scoped Vercel variables were created from the already approved Development demo configuration so the public demo retains Development data; no Supabase production project and no unrelated project were changed. Live payments remain disabled. A custom logo, revised colour palette, primary domain, wildcard DNS, subdomain routing, dedicated Production backend/secrets, and the controlled-pilot go/no-go remain pending.
+- `[IN PROGRESS]` P36 corrective follow-up - On 15 September 2026, the client rejected the split two-line `churchwith` / uppercase `EASE` wordmark. Replace it with the exact single-line lowercase `churchwithease` wordmark everywhere the shared Brand component renders, verify desktop and mobile layouts, and update only the canonical Church deployment.
 - `[PENDING]` P37 - Obtain approved Privacy Policy, Terms of Service, prayer-request consent, refund/chargeback process, data-retention policy, and Barbados receipt/statement/reporting requirements.
 - `[PENDING]` P38 - Provision the confirmed pilot church and execute sandbox acceptance testing with client sign-off.
 - `[PENDING]` P39 - Separate Preview and Production secrets, complete production smoke tests, approve the go/no-go checklist, and launch the controlled pilot.
@@ -210,4 +211,4 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Next task
 
-`P36 - churchwithease product-name rollout and existing-alias production-demo release` is `[COMPLETE]`. `P18 - End-to-end server giving flow` is next. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
+`P36 - single-line churchwithease wordmark correction` is `[IN PROGRESS]` following the client's 15 September 2026 visual review. `P18 - End-to-end server giving flow` remains next. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
