@@ -2,7 +2,7 @@
 
 Last updated: 15 September 2026
 Repository: `church-tithing-platform`
-Current phase: P36 single-line `churchwithease` wordmark correction is complete; P18 giving-flow implementation is next
+Current phase: P36 official `churchwithease` logo-asset integration is in progress; P18 giving-flow implementation resumes next
 Public production alias (unchanged): https://church-tithing-platform-3k2j.vercel.app/
 Latest non-production preview branch: https://github.com/abdulnafa/church-tithing-platform/tree/codex/p17-preview-20260911
 
@@ -25,7 +25,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - The platform must never hold, pool, withdraw, or redistribute donation funds.
 - No raw card number, CVC, bank credential, or unencrypted provider secret may be stored by the application.
 - English-only responsive web application for v1; no native mobile app.
-- `[COMPLETE]` On 14 September 2026, the client approved `churchwithease` as the product name and authorized making the website live on the existing Church Vercel production URL. No custom domain, logo asset, colour revision, or reference brand was supplied, so the existing symbol and palette remain in place and those assets remain pending.
+- `[COMPLETE]` On 14 September 2026, the client approved `churchwithease` as the product name and authorized making the website live on the existing Church Vercel production URL. On 15 September 2026, the client then supplied six official logo exports and explicitly requested that the website use them. A custom domain, separate palette specification, final tagline, and other reference-brand guidance remain pending.
 
 ## Confirmed communication preference
 
@@ -181,6 +181,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - `[PENDING]` P35 - Complete accessibility, responsive-browser, performance, email-deliverability, and security review.
 - `[COMPLETE]` P36 - On 14 September 2026, replaced the user-visible `Kindred Giving` placeholder with the exact lowercase product name `churchwithease` across shared branding, page metadata, authentication copy, giving-page attribution, email-template source, fallback identity copy, and the generated browser icon while preserving stable internal request and workspace identifiers. Commit `aa0ab33fa6e3fda7d129f4343fae6e62cf24cb1c` passed 1,398/1,398 tests, ESLint, the Next.js production build, desktop 1440x900 and mobile 390x844 browser QA, header-hover contrast, both public giving pages, both permanent QR redirects, and the complete Member, Church Owner, and Platform Admin allow/deny route matrix. The canonical Church-only Production build `dpl_FwqkBDouceZbdjCWTkbqDnTysL7T` reached `READY` and now serves https://church-tithing-platform-3k2j.vercel.app/ publicly without Vercel login. Its first 30-minute post-launch request-log scan returned zero error/fatal requests and zero 5xx responses. Two encrypted Production-scoped Vercel variables were created from the already approved Development demo configuration so the public demo retains Development data; no Supabase production project and no unrelated project were changed. Live payments remain disabled. A custom logo, revised colour palette, primary domain, wildcard DNS, subdomain routing, dedicated Production backend/secrets, and the controlled-pilot go/no-go remain pending.
 - `[COMPLETE]` P36 corrective follow-up - On 15 September 2026, replaced the client-rejected split two-line `churchwith` / uppercase `EASE` wordmark with the exact single-line lowercase `churchwithease` text from the shared product-name constant. Commit `9060dc5970241d414dd821047b949b849124fc48` passed the focused 3/3 branding tests, the full 1,398/1,398 suite, ESLint, the 26-route Next.js production build, independent React/layout review, and local plus public desktop 1440x900/mobile 390x844 rendered QA with one text line per visible mark, zero overflow, zero split/uppercase remnants, visible header hover text, zero console/network/framework-overlay issues, and public homepage/login/giving HTTP 200 responses. The exact 282-file source manifest was first built READY as canonical-project Preview deployment `dpl_9VvHJayTZkYfqKvadoXAQuDQv1EZ`, then rebuilt with Production environment values as canonical-project deployment `dpl_5eFKhs2k9QCooAnWcwHBJvjynpP7`; the public alias https://church-tithing-platform-3k2j.vercel.app/ was confirmed assigned and a first 30-minute request-log scan returned zero error/fatal and zero 5xx rows. No GitHub push, sibling Vercel project, domain setting, environment variable, Supabase project, or unrelated project was changed.
+- `[IN PROGRESS]` P36 official logo-assets follow-up - On 15 September 2026, the client supplied six official `churchwithease` PNG logo exports and requested their use on the live website. Integrate the appropriate supplied transparent horizontal and symbol variants into shared product-brand surfaces and app-icon metadata, preserve separate tenant/church uploaded logos, verify responsive rendering and asset delivery, and publish only to the existing canonical Church Vercel project without touching any sibling or unrelated project.
 - `[PENDING]` P37 - Obtain approved Privacy Policy, Terms of Service, prayer-request consent, refund/chargeback process, data-retention policy, and Barbados receipt/statement/reporting requirements.
 - `[PENDING]` P38 - Provision the confirmed pilot church and execute sandbox acceptance testing with client sign-off.
 - `[PENDING]` P39 - Separate Preview and Production secrets, complete production smoke tests, approve the go/no-go checklist, and launch the controlled pilot.
@@ -194,7 +195,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 - `[PENDING]` Staff roles and detailed permission matrix.
 - `[PENDING]` Historical guest-to-account claiming/opt-in, verified email-change synchronization, donor unlink/account deletion/retention, anonymous-giving semantics, phone/address/TIN, recurring-edit/retry, campaign, annual-statement, manual cash/cheque, subscription-failure, and Super Admin authority decisions listed in `docs/OPEN_ITEMS.md`.
 - `[PENDING]` Transactional email provider, sending domain, from/reply-to policy, and recipients.
-- `[COMPLETE]` The client supplied and approved the product name `churchwithease` on 14 September 2026. The custom domain, logo asset, final tagline, colour revisions, and any resulting design revisions remain pending.
+- `[COMPLETE]` The client supplied and approved the product name `churchwithease` on 14 September 2026 and supplied six official logo PNG exports on 15 September 2026. Their website integration is tracked in the active P36 official-logo follow-up. The custom domain, final tagline, and any separate colour or broader design revisions remain pending.
 - `[PENDING]` Legal, privacy, consent, refund/dispute, retention, accounting, and Barbados reporting approvals.
 
 ## Confirmed out of scope for v1
@@ -211,4 +212,4 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Next task
 
-`P36 - single-line churchwithease wordmark correction` is `[COMPLETE]`. `P18 - End-to-end server giving flow` is next. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
+`P36 - official churchwithease logo-assets follow-up` is `[IN PROGRESS]`. `P18 - End-to-end server giving flow` resumes next. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.

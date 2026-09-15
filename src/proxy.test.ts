@@ -37,6 +37,9 @@ describe("Next.js authentication proxy", () => {
     "/_next/static/chunks/app.js",
     "/_next/image?url=%2Flogo.png&w=64&q=75",
     "/favicon.ico",
+    "/icon.png?icon.0dma4a00qkr6t.png",
+    "/brand/churchwithease-horizontal.png",
+    "/brand/churchwithease-symbol.png",
     "/church-logo.svg",
     "/welcome-video.mp4",
   ])("skips immutable or public asset %s", (url) => {

@@ -1,6 +1,7 @@
+import Image from "next/image";
 import Link from "next/link";
 
-import { PRODUCT_NAME } from "@/lib/branding";
+import { BRAND_ASSETS, PRODUCT_NAME } from "@/lib/branding";
 
 type BrandProps = {
   compact?: boolean;
@@ -10,20 +11,26 @@ type BrandProps = {
 
 export function Brand({ compact = false, href = "/", inverted = false }: BrandProps) {
   return (
-    <Link className="focus-ring inline-flex items-center gap-3 rounded-lg" href={href}>
-      <span className={`grid size-10 place-items-center rounded-[14px] ${inverted ? "bg-white text-[var(--sage-dark)]" : "bg-[var(--sage)] text-white"}`}>
-        <svg aria-hidden="true" fill="none" viewBox="0 0 32 32" className="size-6">
-          <path d="M16 26V10" stroke="currentColor" strokeLinecap="round" strokeWidth="2.4" />
-          <path d="M16 15c-5.8 0-9-3.1-9-8 5.8 0 9 3.1 9 8Z" fill="currentColor" opacity=".86" />
-          <path d="M16 20c5.8 0 9-3.1 9-8-5.8 0-9 3.1-9 8Z" fill="currentColor" opacity=".58" />
-        </svg>
-      </span>
-      {compact && <span className="sr-only">{PRODUCT_NAME} home</span>}
-      {!compact && (
-        <span className={`whitespace-nowrap text-[15px] font-bold leading-none tracking-[-0.03em] ${inverted ? "text-white" : "text-[var(--ink)]"}`}>
-          {PRODUCT_NAME}
-        </span>
-      )}
+    <Link
+      aria-label={`${PRODUCT_NAME} home`}
+      className={`focus-ring inline-flex shrink-0 items-center rounded-lg ${
+        compact ? "min-h-11 min-w-11 justify-center" : ""
+      } ${inverted ? "drop-shadow-[0_1px_1px_rgba(0,0,0,0.12)]" : ""}`}
+      href={href}
+    >
+      <Image
+        alt=""
+        className={
+          compact
+            ? "h-auto w-11"
+            : "h-auto w-[172px] sm:w-[184px]"
+        }
+        height={compact ? 784 : 422}
+        loading="eager"
+        src={compact ? BRAND_ASSETS.symbol : BRAND_ASSETS.horizontal}
+        unoptimized
+        width={compact ? 1133 : 2000}
+      />
     </Link>
   );
 }

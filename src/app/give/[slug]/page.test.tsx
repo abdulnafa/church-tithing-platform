@@ -114,6 +114,22 @@ describe("public giving page", () => {
     expect(markup).not.toContain("Kindred Giving");
   });
 
+  it("keeps an individual church logo separate from the platform brand", async () => {
+    const result = successfulResult();
+    getPublicGivingPageBySlugMock.mockResolvedValue(
+      successfulResult({
+        church: { ...result.page.church, logoUrl: null },
+      }),
+    );
+
+    const markup = renderToStaticMarkup(
+      await GivingPage({ params: Promise.resolve({ slug: "harbour-grace" }) }),
+    );
+
+    expect(markup).toContain('data-church-mark="sm"');
+    expect(markup).not.toContain("/brand/churchwithease-");
+  });
+
   it("passes a minimum serializable target DTO to the client component", async () => {
     renderToStaticMarkup(
       await GivingPage({ params: Promise.resolve({ slug: "harbour-grace" }) }),
