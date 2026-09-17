@@ -61,6 +61,7 @@ const checkoutRow = {
   provider_payment_reference: `mock_payment_${CHECKOUT_ID.replaceAll("-", "")}`,
   provider_schedule_reference: null,
   thank_you_message: "Thank you for supporting our church.",
+  created_at: "2026-09-17T12:00:00+00:00",
 };
 
 describe("mock giving database adapter", () => {
@@ -127,6 +128,7 @@ describe("mock giving database adapter", () => {
         providerPaymentReference: `mock_payment_${CHECKOUT_ID.replaceAll("-", "")}`,
         providerScheduleReference: null,
         thankYouMessage: "Thank you for supporting our church.",
+        createdAt: "2026-09-17T12:00:00+00:00",
       },
     });
     expect(rpcMock).toHaveBeenCalledWith("get_mock_giving_checkout", {
@@ -156,6 +158,7 @@ describe("mock giving database adapter", () => {
     { provider_payment_reference: "real-secret-reference" },
     { provider_schedule_reference: "mock_schedule_bad" },
     { church_name: " Unsafe" },
+    { created_at: "not-a-timestamp" },
   ])("fails closed for a malformed checkout snapshot", async (override) => {
     rpcMock.mockResolvedValue({
       data: [{ ...checkoutRow, ...override }],
@@ -186,6 +189,9 @@ describe("mock giving database adapter", () => {
           donation_status: "succeeded",
           recurring_status: "active",
           replayed: false,
+          webhook_event_id: "90000000-0000-4000-8000-000000000004",
+          webhook_status: "processed",
+          webhook_outcome: "donation_succeeded",
         },
         error: null,
       });
@@ -201,14 +207,19 @@ describe("mock giving database adapter", () => {
       }),
     ).resolves.toMatchObject({
       ok: true,
-      state: { checkoutStatus: "completed", donationStatus: "succeeded" },
+      state: {
+        checkoutStatus: "completed",
+        donationStatus: "succeeded",
+        webhookStatus: "processed",
+        webhookOutcome: "donation_succeeded",
+      },
     });
     expect(rpcMock.mock.calls[0]).toEqual([
       "cancel_mock_giving_checkout",
       { checkout_id: CHECKOUT_ID, capability_token: REQUEST_ID },
     ]);
     expect(rpcMock.mock.calls[1]).toEqual([
-      "complete_mock_giving_checkout",
+      "process_mock_giving_webhook",
       {
         checkout_id: CHECKOUT_ID,
         capability_token: REQUEST_ID,
@@ -216,6 +227,144 @@ describe("mock giving database adapter", () => {
         signature: "a".repeat(64),
       },
     ]);
+    expect(createPublicServerSupabaseClientMock).toHaveBeenCalledOnce();
+    expect(createPrivilegedServerSupabaseClientMock).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    ["processed", "donation_failed", false],
+    ["ignored", "ignored_older_event", false],
+    ["ignored", "ignored_terminal_state", true],
+  ])(
+    "accepts the safe webhook result %s/%s without treating provider failure as handler failure",
+    async (webhookStatus, webhookOutcome, replayed) => {
+      rpcMock.mockResolvedValue({
+        data: {
+          checkout_id: CHECKOUT_ID,
+          checkout_status: "open",
+          donation_status:
+            webhookOutcome === "donation_failed" ? "failed" : "succeeded",
+          recurring_status: null,
+          replayed,
+          webhook_event_id: "90000000-0000-4000-8000-000000000004",
+          webhook_status: webhookStatus,
+          webhook_outcome: webhookOutcome,
+        },
+        error: null,
+      });
+
+      await expect(
+        completeMockGivingCheckout(CHECKOUT_ID, REQUEST_ID, {
+          rawBody: '{"safe":true}',
+          signature: "a".repeat(64),
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        state: { webhookStatus, webhookOutcome, replayed },
+      });
+      expect(createPrivilegedServerSupabaseClientMock).toHaveBeenCalledOnce();
+      expect(createPublicServerSupabaseClientMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["partially_refunded", "refunded", "disputed"])(
+    "acknowledges a webhook ignored for an existing %s donation",
+    async (donationStatus) => {
+      rpcMock.mockResolvedValue({
+        data: {
+          checkout_id: CHECKOUT_ID,
+          checkout_status: "completed",
+          donation_status: donationStatus,
+          recurring_status: null,
+          replayed: false,
+          webhook_event_id: "90000000-0000-4000-8000-000000000004",
+          webhook_status: "ignored",
+          webhook_outcome: "ignored_terminal_state",
+        },
+        error: null,
+      });
+
+      await expect(
+        completeMockGivingCheckout(CHECKOUT_ID, REQUEST_ID, {
+          rawBody: '{"safe":true}',
+          signature: "a".repeat(64),
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        state: {
+          donationStatus,
+          webhookStatus: "ignored",
+          webhookOutcome: "ignored_terminal_state",
+        },
+      });
+    },
+  );
+
+  it("keeps a journaled handler failure retryable", async () => {
+    rpcMock.mockResolvedValue({
+      data: {
+        checkout_id: CHECKOUT_ID,
+        checkout_status: "open",
+        donation_status: "pending",
+        recurring_status: null,
+        replayed: false,
+        webhook_event_id: "90000000-0000-4000-8000-000000000004",
+        webhook_status: "failed",
+        webhook_outcome: "handler_failed",
+      },
+      error: null,
+    });
+
+    await expect(
+      completeMockGivingCheckout(CHECKOUT_ID, REQUEST_ID, {
+        rawBody: '{"safe":true}',
+        signature: "a".repeat(64),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "handler_failed" });
+  });
+
+  it.each([
+    { webhook_event_id: "not-a-uuid" },
+    { webhook_status: "processed", webhook_outcome: "ignored_older_event" },
+    { webhook_status: "ignored", webhook_outcome: "donation_succeeded" },
+    { webhook_status: "failed", webhook_outcome: "donation_failed" },
+  ])("fails closed for a malformed webhook result", async (override) => {
+    rpcMock.mockResolvedValue({
+      data: {
+        checkout_id: CHECKOUT_ID,
+        checkout_status: "completed",
+        donation_status: "succeeded",
+        recurring_status: null,
+        replayed: false,
+        webhook_event_id: "90000000-0000-4000-8000-000000000004",
+        webhook_status: "processed",
+        webhook_outcome: "donation_succeeded",
+        ...override,
+      },
+      error: null,
+    });
+
+    await expect(
+      completeMockGivingCheckout(CHECKOUT_ID, REQUEST_ID, {
+        rawBody: '{"safe":true}',
+        signature: "a".repeat(64),
+      }),
+    ).resolves.toEqual({ ok: false, reason: "unavailable" });
+  });
+
+  it.each([
+    ["MOCK_WEBHOOK_EVENT_LIMIT", "invalid_webhook"],
+    ["MOCK_WEBHOOK_EVENT_COLLISION", "event_collision"],
+    ["private database detail", "unavailable"],
+  ])("maps completion error %s to %s", async (message, reason) => {
+    rpcMock.mockResolvedValue({ data: null, error: { message } });
+
+    await expect(
+      completeMockGivingCheckout(CHECKOUT_ID, REQUEST_ID, {
+        rawBody: '{"safe":true}',
+        signature: "a".repeat(64),
+      }),
+    ).resolves.toEqual({ ok: false, reason });
   });
 
   it.each([

@@ -33,6 +33,7 @@ const WEBHOOK = {
   rawBody: JSON.stringify({
     checkoutId: CHECKOUT_ID,
     eventId: "mock_event_10000000000040008000000000000001",
+    occurredAt: "2026-09-17T12:00:00.000Z",
     paymentReference: "mock_payment_10000000000040008000000000000001",
     type: "payment.succeeded",
   }),
@@ -53,6 +54,7 @@ const checkout = {
   providerPaymentReference: "mock_payment_10000000000040008000000000000001",
   providerScheduleReference: null,
   thankYouMessage: "Thank you.",
+  createdAt: "2026-09-17T12:00:00+00:00",
 } as const;
 
 function mutationRequest(
@@ -90,6 +92,9 @@ describe("mock checkout complete and cancel routes", () => {
         donationStatus: "succeeded",
         recurringStatus: null,
         replayed: false,
+        webhookEventId: "30000000-0000-4000-8000-000000000005",
+        webhookStatus: "processed",
+        webhookOutcome: "donation_succeeded",
       },
     });
     cancelMockGivingCheckoutMock.mockResolvedValue({
@@ -140,6 +145,9 @@ describe("mock checkout complete and cancel routes", () => {
         donationStatus: "succeeded",
         recurringStatus: null,
         replayed: true,
+        webhookEventId: "30000000-0000-4000-8000-000000000005",
+        webhookStatus: "processed",
+        webhookOutcome: "donation_succeeded",
       },
     });
 
@@ -213,6 +221,22 @@ describe("mock checkout complete and cancel routes", () => {
     );
 
     expect(response.status).toBe(503);
+    expect(await response.text()).toBe("Demo checkout unavailable.");
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it.each([
+    ["event_collision", 409],
+    ["handler_failed", 503],
+  ])("maps %s to a generic safe completion error", async (reason, status) => {
+    completeMockGivingCheckoutMock.mockResolvedValue({ ok: false, reason });
+
+    const response = await completeCheckout(
+      mutationRequest("complete"),
+      context,
+    );
+
+    expect(response.status).toBe(status);
     expect(await response.text()).toBe("Demo checkout unavailable.");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });

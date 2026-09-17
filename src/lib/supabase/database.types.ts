@@ -761,7 +761,11 @@ export type Database = {
           payment_method_last4: string | null
           processing_fee_minor: number
           provider_charge_reference: string | null
+          provider_event_occurred_at: string | null
+          provider_event_reference: string | null
+          provider_event_type: string | null
           provider_payment_reference: string | null
+          provider_terminal_audit_log_id: number | null
           recurring_gift_id: string | null
           refunded_amount_minor: number
           refunded_at: string | null
@@ -794,7 +798,11 @@ export type Database = {
           payment_method_last4?: string | null
           processing_fee_minor?: number
           provider_charge_reference?: string | null
+          provider_event_occurred_at?: string | null
+          provider_event_reference?: string | null
+          provider_event_type?: string | null
           provider_payment_reference?: string | null
+          provider_terminal_audit_log_id?: number | null
           recurring_gift_id?: string | null
           refunded_amount_minor?: number
           refunded_at?: string | null
@@ -827,7 +835,11 @@ export type Database = {
           payment_method_last4?: string | null
           processing_fee_minor?: number
           provider_charge_reference?: string | null
+          provider_event_occurred_at?: string | null
+          provider_event_reference?: string | null
+          provider_event_type?: string | null
           provider_payment_reference?: string | null
+          provider_terminal_audit_log_id?: number | null
           recurring_gift_id?: string | null
           refunded_amount_minor?: number
           refunded_at?: string | null
@@ -871,6 +883,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "funds"
             referencedColumns: ["church_id", "id"]
+          },
+          {
+            foreignKeyName: "donations_provider_terminal_audit_fkey"
+            columns: ["provider_terminal_audit_log_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "donations_recurring_identity_tenant_fk"
@@ -2181,16 +2200,22 @@ export type Database = {
       webhook_events: {
         Row: {
           attempt_count: number
+          audit_log_id: number | null
           church_id: string | null
           connection_id: string | null
           created_at: string
+          delivery_count: number
+          donation_id: string | null
+          event_occurred_at: string
           event_type: string
           external_event_reference: string
           id: string
           last_error: string | null
+          last_received_at: string
           next_retry_at: string | null
-          payload_sha256: string | null
+          payload_sha256: string
           processed_at: string | null
+          processing_outcome: string | null
           processing_started_at: string | null
           provider: string
           received_at: string
@@ -2200,16 +2225,22 @@ export type Database = {
         }
         Insert: {
           attempt_count?: number
+          audit_log_id?: number | null
           church_id?: string | null
           connection_id?: string | null
           created_at?: string
+          delivery_count?: number
+          donation_id?: string | null
+          event_occurred_at: string
           event_type: string
           external_event_reference: string
           id?: string
           last_error?: string | null
+          last_received_at?: string
           next_retry_at?: string | null
-          payload_sha256?: string | null
+          payload_sha256: string
           processed_at?: string | null
+          processing_outcome?: string | null
           processing_started_at?: string | null
           provider: string
           received_at?: string
@@ -2219,16 +2250,22 @@ export type Database = {
         }
         Update: {
           attempt_count?: number
+          audit_log_id?: number | null
           church_id?: string | null
           connection_id?: string | null
           created_at?: string
+          delivery_count?: number
+          donation_id?: string | null
+          event_occurred_at?: string
           event_type?: string
           external_event_reference?: string
           id?: string
           last_error?: string | null
+          last_received_at?: string
           next_retry_at?: string | null
-          payload_sha256?: string | null
+          payload_sha256?: string
           processed_at?: string | null
+          processing_outcome?: string | null
           processing_started_at?: string | null
           provider?: string
           received_at?: string
@@ -2237,6 +2274,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "webhook_events_audit_log_fkey"
+            columns: ["audit_log_id"]
+            isOneToOne: false
+            referencedRelation: "audit_logs"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "webhook_events_church_id_fkey"
             columns: ["church_id"]
@@ -2249,6 +2293,13 @@ export type Database = {
             columns: ["church_id", "connection_id"]
             isOneToOne: false
             referencedRelation: "payment_provider_connections"
+            referencedColumns: ["church_id", "id"]
+          },
+          {
+            foreignKeyName: "webhook_events_donation_tenant_fkey"
+            columns: ["church_id", "donation_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
             referencedColumns: ["church_id", "id"]
           },
         ]
@@ -2675,6 +2726,41 @@ export type Database = {
         Args: { input_value: string }
         Returns: boolean
       }
+      process_mock_giving_webhook: {
+        Args: {
+          capability_token: string
+          checkout_id: string
+          raw_body: string
+          signature: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_completion_result"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_completion_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      process_mock_giving_webhook_core: {
+        Args: {
+          capability_token: string
+          checkout_id: string
+          raw_body: string
+          signature: string
+          verified_payload_sha256: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_completion_result"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_completion_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      process_mock_giving_webhook_event: {
+        Args: { target_checkout_id: string; target_webhook_event_id: string }
+        Returns: string
+      }
       provision_church: {
         Args: {
           church_currency?: string
@@ -2765,6 +2851,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      webhook_sanitized_payload_is_safe: {
+        Args: { candidate: Json }
+        Returns: boolean
       }
     }
     Enums: {
@@ -3028,6 +3118,9 @@ export type Database = {
         donation_status: string | null
         recurring_status: string | null
         replayed: boolean | null
+        webhook_event_id: string | null
+        webhook_status: string | null
+        webhook_outcome: string | null
       }
       mock_giving_checkout_record: {
         checkout_id: string | null
@@ -3043,6 +3136,7 @@ export type Database = {
         provider_payment_reference: string | null
         provider_schedule_reference: string | null
         thank_you_message: string | null
+        created_at: string | null
       }
       mock_giving_checkout_start_result: {
         checkout_id: string | null

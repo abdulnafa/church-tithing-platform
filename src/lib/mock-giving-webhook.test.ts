@@ -25,6 +25,7 @@ describe("mock payment webhook signing", () => {
         providerPaymentReference: `mock_payment_${CHECKOUT_ID.replaceAll("-", "")}`,
         providerScheduleReference: null,
         thankYouMessage: null,
+        createdAt: "2026-09-17T12:00:00+00:00",
       },
       CAPABILITY_TOKEN,
     );
@@ -32,6 +33,7 @@ describe("mock payment webhook signing", () => {
     expect(JSON.parse(result.rawBody)).toEqual({
       checkoutId: CHECKOUT_ID,
       eventId: `mock_event_${CHECKOUT_ID.replaceAll("-", "")}`,
+      occurredAt: "2026-09-17T12:00:00.000Z",
       paymentReference: `mock_payment_${CHECKOUT_ID.replaceAll("-", "")}`,
       type: "payment.succeeded",
     });
@@ -44,5 +46,29 @@ describe("mock payment webhook signing", () => {
     expect(result.rawBody).not.toMatch(
       /donor|email|prayer|token|signature|card|bank/i,
     );
+  });
+
+  it("keeps the exact event identity and signed bytes stable across retries", () => {
+    const checkout = {
+      checkoutId: CHECKOUT_ID,
+      churchSlug: "harbour-grace",
+      churchName: "Harbour Grace Church",
+      fundName: "Tithes",
+      campaignName: null,
+      amountMinor: "5000",
+      currency: "BBD" as const,
+      frequency: "one_time" as const,
+      checkoutStatus: "open" as const,
+      expiresAt: "2026-09-17T12:30:00+00:00",
+      providerPaymentReference: `mock_payment_${CHECKOUT_ID.replaceAll("-", "")}`,
+      providerScheduleReference: null,
+      thankYouMessage: null,
+      createdAt: "2026-09-17T12:00:00+00:00",
+    };
+
+    const first = createMockPaymentSucceededWebhook(checkout, CAPABILITY_TOKEN);
+    const retry = createMockPaymentSucceededWebhook(checkout, CAPABILITY_TOKEN);
+
+    expect(retry).toEqual(first);
   });
 });

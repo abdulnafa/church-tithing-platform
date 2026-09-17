@@ -122,7 +122,7 @@ select extensions.is(
     'EXECUTE'
   ),
   false,
-  'service role cannot call the browser capability completion RPC'
+  'service role cannot call the legacy browser capability completion RPC'
 );
 select extensions.is(
   has_function_privilege(
@@ -516,8 +516,8 @@ select extensions.is(
 );
 select extensions.is(
   (select count(*) from public.webhook_events),
-  0::bigint,
-  'temporary P18 completion leaves the P19 webhook journal untouched'
+  1::bigint,
+  'P18 completion now creates one durable P19 webhook journal row'
 );
 set local role anon;
 select extensions.is(
@@ -530,6 +530,8 @@ select extensions.is(
   true,
   'exact signed completion replay is idempotent'
 );
+reset role;
+set local role anon;
 select extensions.set_eq(
   $$select key
     from public.get_mock_giving_checkout(
@@ -541,7 +543,7 @@ select extensions.set_eq(
     'checkout_id', 'church_slug', 'church_name', 'fund_name', 'campaign_name',
     'amount_minor_text', 'currency', 'frequency', 'checkout_status',
     'expires_at', 'provider_payment_reference', 'provider_schedule_reference',
-    'thank_you_message'
+    'thank_you_message', 'created_at'
   ],
   'public snapshot exposes exactly the reviewed safe fields'
 );

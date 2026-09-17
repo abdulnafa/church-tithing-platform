@@ -24,15 +24,35 @@ export type MockGivingCheckoutSnapshot = Readonly<{
   providerPaymentReference: string;
   providerScheduleReference: string | null;
   thankYouMessage: string | null;
+  createdAt: string;
 }>;
 
 export type MockGivingState = Readonly<{
   checkoutId: string;
   checkoutStatus: MockCheckoutStatus;
-  donationStatus: "pending" | "succeeded" | "canceled";
+  donationStatus:
+    | "pending"
+    | "processing"
+    | "succeeded"
+    | "failed"
+    | "partially_refunded"
+    | "refunded"
+    | "disputed"
+    | "canceled";
   recurringStatus: "incomplete" | "active" | "canceled" | null;
   replayed: boolean;
 }>;
+
+export type MockGivingWebhookState = MockGivingState &
+  Readonly<{
+    webhookEventId: string;
+    webhookStatus: "processed" | "ignored";
+    webhookOutcome:
+      | "donation_succeeded"
+      | "donation_failed"
+      | "ignored_older_event"
+      | "ignored_terminal_state";
+  }>;
 
 type RpcResponse = Readonly<{ data: unknown; error: unknown }>;
 type PublicRpcClient = Readonly<{
@@ -55,12 +75,24 @@ export type ReadMockGivingResult =
   | Readonly<{ ok: true; checkout: MockGivingCheckoutSnapshot }>
   | Readonly<{ ok: false; reason: "not_found" | "unavailable" }>;
 
+type MockGivingMutationFailure = Readonly<{
+  ok: false;
+  reason:
+    | "forbidden"
+    | "invalid_state"
+    | "invalid_webhook"
+    | "event_collision"
+    | "handler_failed"
+    | "unavailable";
+}>;
+
 export type MutateMockGivingResult =
   | Readonly<{ ok: true; state: MockGivingState }>
-  | Readonly<{
-      ok: false;
-      reason: "forbidden" | "invalid_state" | "invalid_webhook" | "unavailable";
-    }>;
+  | MockGivingMutationFailure;
+
+export type CompleteMockGivingResult =
+  | Readonly<{ ok: true; state: MockGivingWebhookState }>
+  | MockGivingMutationFailure;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -147,6 +179,7 @@ function parseCheckoutSnapshot(value: unknown): MockGivingCheckoutSnapshot | nul
     !FREQUENCIES.has(value.frequency as string) ||
     !CHECKOUT_STATUSES.has(value.checkout_status as string) ||
     !isRfc3339(value.expires_at) ||
+    !isRfc3339(value.created_at) ||
     typeof value.provider_payment_reference !== "string" ||
     !PROVIDER_PAYMENT_PATTERN.test(value.provider_payment_reference) ||
     !(
@@ -181,6 +214,7 @@ function parseCheckoutSnapshot(value: unknown): MockGivingCheckoutSnapshot | nul
     providerPaymentReference: value.provider_payment_reference,
     providerScheduleReference: value.provider_schedule_reference,
     thankYouMessage: value.thank_you_message,
+    createdAt: value.created_at,
   };
 }
 
@@ -188,9 +222,16 @@ function parseState(value: unknown, checkoutId: string): MockGivingState | null 
   if (!isRecord(value) || value.checkout_id !== checkoutId) return null;
   if (
     !CHECKOUT_STATUSES.has(value.checkout_status as string) ||
-    !new Set(["pending", "succeeded", "canceled"]).has(
-      value.donation_status as string,
-    ) ||
+    !new Set([
+      "pending",
+      "processing",
+      "succeeded",
+      "failed",
+      "partially_refunded",
+      "refunded",
+      "disputed",
+      "canceled",
+    ]).has(value.donation_status as string) ||
     !new Set([null, "incomplete", "active", "canceled"]).has(
       value.recurring_status as string | null,
     ) ||
@@ -206,6 +247,37 @@ function parseState(value: unknown, checkoutId: string): MockGivingState | null 
     recurringStatus: value.recurring_status as MockGivingState["recurringStatus"],
     replayed: value.replayed,
   };
+}
+
+function parseWebhookState(
+  value: unknown,
+  checkoutId: string,
+): MockGivingWebhookState | "handler_failed" | null {
+  const state = parseState(value, checkoutId);
+  if (!state || !isRecord(value) || !isUuid(value.webhook_event_id)) return null;
+
+  if (
+    value.webhook_status === "failed" &&
+    value.webhook_outcome === "handler_failed"
+  ) {
+    return "handler_failed";
+  }
+
+  const validOutcome =
+    (value.webhook_status === "processed" &&
+      (value.webhook_outcome === "donation_succeeded" ||
+        value.webhook_outcome === "donation_failed")) ||
+    (value.webhook_status === "ignored" &&
+      (value.webhook_outcome === "ignored_older_event" ||
+        value.webhook_outcome === "ignored_terminal_state"));
+  if (!validOutcome) return null;
+
+  return {
+    ...state,
+    webhookEventId: value.webhook_event_id,
+    webhookStatus: value.webhook_status,
+    webhookOutcome: value.webhook_outcome,
+  } as MockGivingWebhookState;
 }
 
 function createClient() {
@@ -294,10 +366,9 @@ export async function getMockGivingCheckout(
 }
 
 async function mutateMockCheckout(
-  functionName: "cancel_mock_giving_checkout" | "complete_mock_giving_checkout",
+  functionName: "cancel_mock_giving_checkout",
   checkoutId: string,
   capabilityToken: string,
-  webhook?: Readonly<{ rawBody: string; signature: string }>,
 ): Promise<MutateMockGivingResult> {
   if (!isUuid(checkoutId) || !isCapabilityToken(capabilityToken)) {
     return { ok: false, reason: "forbidden" };
@@ -308,9 +379,6 @@ async function mutateMockCheckout(
     response = await createClient().rpc(functionName, {
       checkout_id: checkoutId,
       capability_token: capabilityToken,
-      ...(webhook
-        ? { raw_body: webhook.rawBody, signature: webhook.signature }
-        : {}),
     });
   } catch {
     return { ok: false, reason: "unavailable" };
@@ -326,6 +394,9 @@ async function mutateMockCheckout(
     }
     if (message === "MOCK_CHECKOUT_INVALID_WEBHOOK") {
       return { ok: false, reason: "invalid_webhook" };
+    }
+    if (message === "MOCK_WEBHOOK_EVENT_COLLISION") {
+      return { ok: false, reason: "event_collision" };
     }
     return { ok: false, reason: "unavailable" };
   }
@@ -347,15 +418,55 @@ export function cancelMockGivingCheckout(
   );
 }
 
-export function completeMockGivingCheckout(
+export async function completeMockGivingCheckout(
   checkoutId: string,
   capabilityToken: string,
   webhook: Readonly<{ rawBody: string; signature: string }>,
-) {
-  return mutateMockCheckout(
-    "complete_mock_giving_checkout",
-    checkoutId,
-    capabilityToken,
-    webhook,
-  );
+): Promise<CompleteMockGivingResult> {
+  if (!isUuid(checkoutId) || !isCapabilityToken(capabilityToken)) {
+    return { ok: false, reason: "forbidden" };
+  }
+
+  let response: RpcResponse;
+  try {
+    response = await createPrivilegedClient().rpc(
+      "process_mock_giving_webhook",
+      {
+        checkout_id: checkoutId,
+        capability_token: capabilityToken,
+        raw_body: webhook.rawBody,
+        signature: webhook.signature,
+      },
+    );
+  } catch {
+    return { ok: false, reason: "unavailable" };
+  }
+
+  if (response.error) {
+    const message = getErrorMessage(response.error);
+    if (message === "MOCK_CHECKOUT_FORBIDDEN") {
+      return { ok: false, reason: "forbidden" };
+    }
+    if (message === "MOCK_CHECKOUT_INVALID_STATE") {
+      return { ok: false, reason: "invalid_state" };
+    }
+    if (message === "MOCK_CHECKOUT_INVALID_WEBHOOK") {
+      return { ok: false, reason: "invalid_webhook" };
+    }
+    if (message === "MOCK_WEBHOOK_EVENT_LIMIT") {
+      return { ok: false, reason: "invalid_webhook" };
+    }
+    if (message === "MOCK_WEBHOOK_EVENT_COLLISION") {
+      return { ok: false, reason: "event_collision" };
+    }
+    return { ok: false, reason: "unavailable" };
+  }
+
+  const state = parseWebhookState(getSingleRow(response.data), checkoutId);
+  if (state === "handler_failed") {
+    return { ok: false, reason: "handler_failed" };
+  }
+  return state
+    ? { ok: true, state }
+    : { ok: false, reason: "unavailable" };
 }

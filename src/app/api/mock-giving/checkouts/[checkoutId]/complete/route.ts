@@ -55,7 +55,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return errorResponse(
       result.reason === "forbidden" || result.reason === "invalid_webhook"
         ? 404
-        : result.reason === "invalid_state"
+        : result.reason === "invalid_state" ||
+            result.reason === "event_collision"
           ? 409
           : 503,
     );
