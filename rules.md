@@ -65,6 +65,8 @@ These rules apply to every task in this repository. Read this file and `project_
 
 - When providing a project update for the client, return one complete copy-paste-ready message inside a single plain-text copy box (a fenced code block) so line breaks and WhatsApp formatting remain intact.
 - Put only the client message inside the copy box. Do not add commentary before or after it when the user asks for text to copy and paste.
+- Write the message as if it is already being sent directly to the recipient. Use natural first-person plural wording for the team (`we completed`, `we added`) and direct second-person wording for requests (`please confirm`, `please send us`).
+- Never refer to the recipient as `the client`, use headings such as `Information Required From the Client`, or explain what should be sent to them. Avoid robotic, generic, or AI-report wording; the message should sound like a concise professional update written personally by the project team.
 - Keep WhatsApp formatting clean and consistent: use short headings, sensible line breaks, simple hyphen bullets, and WhatsApp-supported emphasis such as `*bold*` only where it improves readability.
 - Write URLs as plain full links so WhatsApp makes them clickable; do not use Markdown link syntax, tables, HTML, or application-specific file links inside the client message.
 - Do not expose internal roadmap labels or task numbers such as `P18` or `P19`, migration/deployment/commit identifiers, automated-test counts, or a technical verification checklist unless the user explicitly asks for those details.
