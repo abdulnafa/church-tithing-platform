@@ -1,6 +1,6 @@
 # Project Rules
 
-Last updated: 5 September 2026
+Last updated: 17 September 2026
 
 These rules apply to every task in this repository. Read this file and `project_context.md` before making changes.
 
@@ -63,9 +63,11 @@ These rules apply to every task in this repository. Read this file and `project_
 
 ## 8. Write every client update as WhatsApp-ready plain text
 
-- When providing a project update for the client, return one complete copy-paste-ready plain-text message.
-- Keep WhatsApp formatting clean and consistent: use short headings, sensible line breaks, simple bullets, and WhatsApp-supported emphasis such as `*bold*` only where it improves readability.
-- Write URLs as plain full links so WhatsApp makes them clickable; do not use Markdown link syntax, tables, HTML, code fences, or application-specific file links in a client message.
-- Clearly separate completed work, current limitations, pending work, and the next step. Never imply that a preview, mock, or unverified feature is live.
-- Use clear client-friendly language and avoid unnecessary developer jargon. If a technical result matters, explain its practical meaning.
-- Do not add commentary before or after the formatted client message when the user asks for text to copy and paste.
+- When providing a project update for the client, return one complete copy-paste-ready message inside a single plain-text copy box (a fenced code block) so line breaks and WhatsApp formatting remain intact.
+- Put only the client message inside the copy box. Do not add commentary before or after it when the user asks for text to copy and paste.
+- Keep WhatsApp formatting clean and consistent: use short headings, sensible line breaks, simple hyphen bullets, and WhatsApp-supported emphasis such as `*bold*` only where it improves readability.
+- Write URLs as plain full links so WhatsApp makes them clickable; do not use Markdown link syntax, tables, HTML, or application-specific file links inside the client message.
+- Do not expose internal roadmap labels or task numbers such as `P18` or `P19`, migration/deployment/commit identifiers, automated-test counts, or a technical verification checklist unless the user explicitly asks for those details.
+- Describe completed work in client-facing terms and practical outcomes. Include only verification information that materially affects the client's decision, such as whether a link is ready to test or whether a feature remains a mock.
+- Clearly separate completed work, current limitations, pending work, required client inputs, and the next step. Never imply that a preview, mock, or unverified feature is live.
+- Use clear client-friendly language and avoid unnecessary developer jargon.

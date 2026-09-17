@@ -29,7 +29,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Confirmed communication preference
 
-- `[COMPLETE]` On 4 September 2026, the user confirmed that every client-facing project update must be delivered as one properly formatted, WhatsApp-ready plain-text message that can be copied directly, uses plain URLs, clearly distinguishes completed and pending work, and contains no surrounding assistant commentary.
+- `[COMPLETE]` On 17 September 2026, the user clarified that every client-facing project update must be delivered inside one plain-text copy box with WhatsApp-safe formatting and plain URLs, contain no surrounding assistant commentary, describe completed work in client-facing terms, clearly separate pending work and required client inputs, and omit internal phase/task labels, test-count or technical-verification lists, and deployment/migration/commit identifiers unless explicitly requested.
 - `[COMPLETE]` On 8 September 2026, the user approved deploying each completed, fully verified task to a non-production Vercel preview. Production promotion or changing the public production alias still requires separate explicit approval.
 
 ## Current delivery target
