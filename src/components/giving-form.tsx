@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 
 import { ShieldIcon } from "@/components/icons";
 import {
@@ -10,6 +10,7 @@ import {
   validateGuestIdentityValues,
   type GuestIdentityValues,
 } from "@/lib/donor-identity";
+import { parseGivingAmountToMinor } from "@/lib/giving-checkout";
 import type {
   PublicGivingCampaignOption,
   PublicGivingChurch,
@@ -26,6 +27,7 @@ type Frequency = "one_time" | "weekly" | "monthly";
 
 type GivingFormProps = {
   churchName: string;
+  churchSlug: string;
   currency: PublicGivingChurch["currency"];
   campaigns: readonly PublicGivingCampaignOption[];
   funds: readonly PublicGivingFund[];
@@ -49,6 +51,7 @@ function formatAmount(
 export function GivingForm({
   campaigns,
   churchName,
+  churchSlug,
   currency,
   funds,
 }: GivingFormProps) {
@@ -63,6 +66,10 @@ export function GivingForm({
   });
   const [prayerRequest, setPrayerRequest] = useState("");
   const [prayerConsent, setPrayerConsent] = useState(false);
+  const [checkoutState, setCheckoutState] = useState<
+    "idle" | "submitting" | "error"
+  >("idle");
+  const checkoutRequestId = useRef<string | null>(null);
   const [touchedGuestFields, setTouchedGuestFields] = useState<
     Readonly<Record<keyof GuestIdentityValues, boolean>>
   >({ fullName: false, email: false });
@@ -89,6 +96,8 @@ export function GivingForm({
     () => formatAmount(currency, effectiveAmount),
     [currency, effectiveAmount],
   );
+  const amountText = customAmount || String(amount);
+  const amountMinor = parseGivingAmountToMinor(amountText);
   const guestIdentityValidation = validateGuestIdentityValues(guestIdentity);
   const guestNameError = touchedGuestFields.fullName
     ? getDonorDisplayNameError(guestIdentity.fullName)
@@ -107,16 +116,42 @@ export function GivingForm({
   const canConsentToPrayerDraft = prayerConsentBoundary.canConsent;
   const prayerDraftReady = prayerConsentBoundary.consented;
   const prayerRequestLength = getPrayerRequestCodePointLength(prayerRequest);
+  const canStartCheckout =
+    guestIdentityValidation.success &&
+    amountMinor !== null &&
+    checkoutState !== "submitting";
 
   function chooseAmount(value: number) {
+    checkoutRequestId.current = null;
+    setCheckoutState("idle");
     setAmount(value);
     setCustomAmount("");
+  }
+
+  function updateCustomAmount(value: string) {
+    checkoutRequestId.current = null;
+    setCheckoutState("idle");
+    setCustomAmount(value);
+  }
+
+  function updateGivingTarget(value: string) {
+    checkoutRequestId.current = null;
+    setCheckoutState("idle");
+    setGivingTarget(value);
+  }
+
+  function updateFrequency(value: Frequency) {
+    checkoutRequestId.current = null;
+    setCheckoutState("idle");
+    setFrequency(value);
   }
 
   function updateGuestIdentity(
     field: keyof GuestIdentityValues,
     value: string,
   ) {
+    checkoutRequestId.current = null;
+    setCheckoutState("idle");
     setGuestIdentity((current) => ({ ...current, [field]: value }));
   }
 
@@ -129,6 +164,46 @@ export function GivingForm({
     setPrayerRequest(limitedValue);
     if (!getPrayerDraftConsentBoundary(limitedValue, prayerConsent).consented) {
       setPrayerConsent(false);
+    }
+  }
+
+  async function startMockCheckout() {
+    setTouchedGuestFields({ fullName: true, email: true });
+    if (!guestIdentityValidation.success || amountMinor === null) return;
+
+    setCheckoutState("submitting");
+    checkoutRequestId.current ??= globalThis.crypto.randomUUID();
+    try {
+      const response = await fetch("/api/mock-giving/checkouts", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          requestId: checkoutRequestId.current,
+          churchSlug,
+          givingTarget,
+          amount: amountText,
+          frequency,
+          fullName: guestIdentityValidation.data.fullName,
+          email: guestIdentityValidation.data.email,
+        }),
+      });
+      const payload = (await response.json()) as unknown;
+      if (
+        !response.ok ||
+        typeof payload !== "object" ||
+        payload === null ||
+        !("checkoutPath" in payload) ||
+        typeof payload.checkoutPath !== "string" ||
+        !payload.checkoutPath.startsWith(
+          `/give/${encodeURIComponent(churchSlug)}/checkout/`,
+        )
+      ) {
+        throw new Error("CHECKOUT_UNAVAILABLE");
+      }
+
+      window.location.assign(payload.checkoutPath);
+    } catch {
+      setCheckoutState("error");
     }
   }
 
@@ -155,11 +230,11 @@ export function GivingForm({
   return (
     <section className="soft-card min-w-0 max-w-full overflow-hidden rounded-[26px] p-5 sm:p-8">
       <div
-        className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium leading-5 text-amber-950"
+        className="mb-6 rounded-2xl border border-[#bfd8cf] bg-[#edf7f3] px-4 py-3 text-xs font-medium leading-5 text-[#174f45]"
         role="note"
       >
-        Online payments are not enabled yet. The required name and email fields
-        below are checked only in this page and are not sent or saved.
+        Development demo only. This checkout records synthetic test data and
+        never asks for a card, moves funds, or enables live payments.
       </div>
 
       <p className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--sage)]">
@@ -204,7 +279,7 @@ export function GivingForm({
             inputMode="decimal"
             max={MAX_PREVIEW_AMOUNT}
             min="1"
-            onChange={(event) => setCustomAmount(event.target.value)}
+            onChange={(event) => updateCustomAmount(event.target.value)}
             placeholder="Other amount"
             step="0.01"
             type="number"
@@ -227,7 +302,7 @@ export function GivingForm({
           aria-describedby="giving-target-description"
           className="focus-ring min-w-0 max-w-full appearance-none rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm font-semibold outline-none"
           id="giving-target"
-          onChange={(event) => setGivingTarget(event.target.value)}
+          onChange={(event) => updateGivingTarget(event.target.value)}
           value={givingTarget}
         >
           <optgroup label="Funds">
@@ -269,7 +344,7 @@ export function GivingForm({
                   : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
               }`}
               key={value}
-              onClick={() => setFrequency(value)}
+              onClick={() => updateFrequency(value)}
               type="button"
             >
               {value === "one_time" ? "One time" : value}
@@ -277,7 +352,8 @@ export function GivingForm({
           ))}
         </div>
         <p className="mt-2 text-[11px] leading-5 text-[var(--ink-soft)]">
-          Recurring options will depend on the approved payment provider.
+          Weekly and monthly choices create demo records only. Real recurring
+          giving still depends on the approved payment provider.
         </p>
       </fieldset>
 
@@ -289,9 +365,9 @@ export function GivingForm({
           className="mb-4 text-[10px] leading-5 text-[var(--ink-soft)]"
           id="giving-guest-details-help"
         >
-          Full name and email will be required for guest checkout. For now, they
-          remain only in this unsaved page draft; no account lookup or donation
-          submission occurs.
+          Full name and email are required for this mock checkout and will be
+          saved as a new guest record. They are never used to find, claim, or
+          link an existing account.
         </p>
         <div className="grid min-w-0 gap-4 sm:grid-cols-2">
           <label className="min-w-0" htmlFor="giving-guest-name">
@@ -372,8 +448,8 @@ export function GivingForm({
           role="status"
         >
           {guestIdentityValidation.success
-            ? "These details look ready, but nothing has been submitted or saved."
-            : "Complete both required fields before checkout is enabled in a later phase."}
+            ? "These details are ready for the mock checkout."
+            : "Complete both required fields before continuing."}
         </p>
       </fieldset>
 
@@ -385,9 +461,9 @@ export function GivingForm({
           className="mb-4 text-[10px] leading-5 text-[var(--ink-soft)]"
           id="giving-prayer-privacy-help"
         >
-          This is a local, unsaved preview only. This application does not send or
-          store anything entered here while checkout is disabled. Final consent
-          and retention wording remains pending approval.
+          This remains a local, unsaved draft. It is deliberately excluded from
+          the mock checkout request and database. Final consent and retention
+          wording remains pending approval.
         </p>
         <label className="block min-w-0" htmlFor="giving-prayer-request">
           <span className="mb-2 block text-xs font-bold text-[var(--ink-soft)]">
@@ -405,7 +481,6 @@ export function GivingForm({
             autoComplete="off"
             className="focus-ring min-h-28 min-w-0 w-full resize-y rounded-2xl border border-[var(--line)] bg-white px-4 py-3.5 text-sm leading-6 outline-none placeholder:text-[#a0a9b4]"
             id="giving-prayer-request"
-            name="prayerRequestDraft"
             onChange={(event) => updatePrayerRequest(event.target.value)}
             placeholder="Write an optional prayer request"
             spellCheck={false}
@@ -441,7 +516,6 @@ export function GivingForm({
             className="focus-ring mt-0.5 size-4 shrink-0 accent-[var(--sage)]"
             disabled={!canConsentToPrayerDraft}
             id="giving-prayer-consent"
-            name="prayerConsentDraft"
             onChange={(event) => setPrayerConsent(event.target.checked)}
             required={canConsentToPrayerDraft}
             type="checkbox"
@@ -485,17 +559,32 @@ export function GivingForm({
       </div>
 
       <button
-        className="mt-5 inline-flex w-full cursor-not-allowed items-center justify-center rounded-full bg-[#d6d9d7] px-5 py-4 text-sm font-bold text-[#59645f]"
-        disabled
+        className={`mt-5 inline-flex w-full items-center justify-center rounded-full px-5 py-4 text-sm font-bold transition ${
+          canStartCheckout
+            ? "bg-[var(--sage)] text-white hover:bg-[var(--sage-dark)]"
+            : "cursor-not-allowed bg-[#d6d9d7] text-[#59645f]"
+        }`}
+        disabled={!canStartCheckout}
+        onClick={startMockCheckout}
         type="button"
       >
-        Online payments not yet available
+        {checkoutState === "submitting"
+          ? "Preparing demo checkout..."
+          : "Continue to demo checkout"}
       </button>
+      {checkoutState === "error" ? (
+        <p
+          className="mt-3 text-center text-xs font-medium text-[#9b463b]"
+          role="alert"
+        >
+          The demo checkout is temporarily unavailable. No payment was made.
+          Please try again.
+        </p>
+      ) : null}
       <p className="mt-4 flex items-start justify-center gap-2 text-center text-[10px] font-medium leading-4 text-[var(--ink-soft)]">
         <ShieldIcon className="mt-0.5 shrink-0" size={13} />
-        Name and email stay in this unsaved page draft. Prayer text and the
-        provisional consent choice also stay only here. No payment information is
-        requested.
+        No card or bank information is requested. Prayer text and the provisional
+        consent choice stay only in this page and are not submitted.
       </p>
     </section>
   );

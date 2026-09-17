@@ -32,11 +32,12 @@ const campaigns = [
 ] as const;
 
 describe("public giving option selector", () => {
-  it("renders real choices and required guest fields while keeping submission disabled", () => {
+  it("renders real choices and a clearly labelled mock checkout", () => {
     const markup = renderToStaticMarkup(
       <GivingForm
         campaigns={campaigns}
         churchName="Harbour Grace Church"
+        churchSlug="harbour-grace"
         currency="BBD"
         funds={funds}
       />,
@@ -46,27 +47,24 @@ describe("public giving option selector", () => {
     expect(markup).toContain("Community Centre");
     expect(markup).toContain('value="fund:20000000-0000-4000-8000-000000000001"');
     expect(markup).toContain('value="campaign:30000000-0000-4000-8000-000000000001"');
-    expect(markup).toMatch(
-      /<button[^>]*disabled=""[^>]*>Online payments not yet available<\/button>/,
-    );
+    expect(markup).toContain("Continue to demo checkout");
+    expect(markup).toContain("Development demo only");
     expect(markup).toContain("Full name");
     expect(markup).toContain("Email address");
     expect(markup).toContain('autoComplete="name"');
     expect(markup).toContain('autoComplete="email"');
     expect(markup).toMatch(/<input[^>]*required=""[^>]*name="guestFullName"/);
     expect(markup).toMatch(/<input[^>]*required=""[^>]*name="guestEmail"/);
-    expect(markup).toContain(
-      "Name and email stay in this unsaved page draft",
-    );
-    expect(markup).toContain("no account lookup or donation submission occurs");
+    expect(markup).toContain("saved as a new guest record");
+    expect(markup).toContain("never used to find, claim, or");
     expect(markup).toContain("Optional prayer request draft");
-    expect(markup).toContain('name="prayerRequestDraft"');
+    expect(markup).not.toContain('name="prayerRequestDraft"');
     expect(markup).toContain('autoComplete="off"');
     expect(markup).toContain('spellCheck="false"');
     expect(markup).toContain("0/2000 characters maximum");
-    expect(markup).toContain('name="prayerConsentDraft"');
+    expect(markup).not.toContain('name="prayerConsentDraft"');
     expect(markup).toContain("Provisional consent");
-    expect(markup).toContain("This application does not send or");
+    expect(markup).toContain("deliberately excluded from");
     expect(markup).toContain("outside donation receipts, statements");
     expect(markup).toContain("does not send prayer text by email");
     expect(markup).toContain("Final email handling, access, retention");
@@ -78,6 +76,7 @@ describe("public giving option selector", () => {
       <GivingForm
         campaigns={campaigns}
         churchName="Harbour Grace Church"
+        churchSlug="harbour-grace"
         currency="BBD"
         funds={funds}
       />,
@@ -107,6 +106,7 @@ describe("public giving option selector", () => {
       <GivingForm
         campaigns={[]}
         churchName="Harbour Grace Church"
+        churchSlug="harbour-grace"
         currency="BBD"
         funds={[]}
       />,
@@ -115,7 +115,7 @@ describe("public giving option selector", () => {
     expect(markup).toContain("No giving options are available yet");
     expect(markup).toContain('role="status"');
     expect(markup).not.toContain("giving-target");
-    expect(markup).not.toContain("Online payments not yet available");
+    expect(markup).not.toContain("Continue to demo checkout");
   });
 
   it("keeps financial campaign goals out of the client component contract", () => {
@@ -128,7 +128,7 @@ describe("public giving option selector", () => {
     expect(source).not.toMatch(/goalAmountMinor|raised|donation total/i);
   });
 
-  it("keeps guest details in transient component state with no send or persistence path", () => {
+  it("submits only an explicit checkout allowlist while keeping prayer local", () => {
     const source = readFileSync(
       new URL("./giving-form.tsx", import.meta.url),
       "utf8",
@@ -152,7 +152,19 @@ describe("public giving option selector", () => {
     expect(source).not.toContain("maxLength={PRAYER_REQUEST_LIMITS.body}");
     expect(source).toContain("validateGuestIdentityValues");
     expect(source).toContain("onBlur");
-    expect(source).not.toMatch(/localStorage|sessionStorage|fetch\(|\.rpc\(|formAction|action=|onSubmit/);
+    expect(source).not.toMatch(/localStorage|sessionStorage|\.rpc\(|formAction|action=|onSubmit/);
+    expect(source).toContain('fetch("/api/mock-giving/checkouts"');
+    const bodyStart = source.indexOf("body: JSON.stringify({");
+    const requestBody = source.slice(
+      bodyStart,
+      source.indexOf("}),", bodyStart) + 3,
+    );
+    expect(requestBody).toMatch(
+      /requestId[\s\S]*churchSlug[\s\S]*givingTarget[\s\S]*amount[\s\S]*frequency[\s\S]*fullName[\s\S]*email/,
+    );
+    expect(requestBody).not.toMatch(/prayer|consent/i);
+    expect(source).not.toContain('name="prayerRequestDraft"');
+    expect(source).not.toContain('name="prayerConsentDraft"');
     expect(source).not.toMatch(/guest.*password|auth_user|donorId|churchId/i);
   });
 
@@ -161,6 +173,7 @@ describe("public giving option selector", () => {
       <GivingForm
         campaigns={[]}
         churchName="Harbour Grace Church"
+        churchSlug="harbour-grace"
         currency="BBD"
         funds={[
           {

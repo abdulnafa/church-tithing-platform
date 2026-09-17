@@ -40,7 +40,7 @@ export async function generateMetadata({
 
   return {
     title: `Give to ${result.page.church.name}`,
-    description: `View the current funds and campaigns for ${result.page.church.name}. Online payments are not enabled yet.`,
+    description: `View the current funds and campaigns for ${result.page.church.name}. A payment-free development checkout is available; live payments remain disabled.`,
   };
 }
 
@@ -100,8 +100,9 @@ export default async function GivingPage({ params }: GivingPageProps) {
             Support {church.name}.
           </h1>
           <p className="mx-auto mt-4 max-w-xl break-words text-sm leading-6 text-white/60 sm:text-base">
-            Explore the church&apos;s current funds and campaigns. Online payment
-            submission will be available after an approved provider is connected.
+            Explore the church&apos;s current funds and campaigns, then try the
+            payment-free development checkout. Live giving remains disabled until
+            an approved provider is connected.
           </p>
         </div>
       </div>
@@ -110,6 +111,7 @@ export default async function GivingPage({ params }: GivingPageProps) {
         <GivingForm
           campaigns={campaignOptions}
           churchName={church.name}
+          churchSlug={church.slug}
           currency={church.currency}
           funds={funds}
         />
@@ -149,14 +151,13 @@ export default async function GivingPage({ params }: GivingPageProps) {
 
           <section className="rounded-[24px] bg-[var(--paper)] p-5 text-center">
             <ShieldIcon className="mx-auto text-[var(--sage)]" size={24} />
-            <h2 className="mt-3 text-sm font-bold">No payment collection yet</h2>
+            <h2 className="mt-3 text-sm font-bold">Development simulation only</h2>
             <p className="mt-2 text-xs leading-5 text-[var(--ink-soft)]">
-              A name and email can be checked in an unsaved page draft, but they
-              are not sent or used to look up an account. An optional prayer
-              request and provisional consent can also be drafted locally, but
-              nothing is submitted or saved. No card or bank information is
-              requested. Future donations must settle directly to the church
-              through its approved provider.
+              The mock flow can save a new guest and synthetic donation for
+              testing, but it never asks for card or bank information and cannot
+              move money. Prayer text stays local and is not submitted. Future
+              live donations must settle directly to the church through its
+              approved provider.
             </p>
           </section>
           <Link

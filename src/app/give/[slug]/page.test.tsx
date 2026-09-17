@@ -106,7 +106,7 @@ describe("public giving page", () => {
     expect(markup).not.toContain("<script>alert(1)</script>");
     expect(markup).toContain("church-logos");
     expect(markup).toContain('data-alt=""');
-    expect(markup).toContain("Online payment submission will be available");
+    expect(markup).toContain("payment-free development checkout");
     expect(markup).toContain(
       "Powered by churchwithease - Digital giving for churches",
     );
@@ -138,6 +138,7 @@ describe("public giving page", () => {
     const props = givingFormMock.mock.calls[0]?.[0];
     expect(props).toEqual({
       churchName: "Harbour <Grace> Church",
+      churchSlug: "harbour-grace",
       currency: "BBD",
       funds: successfulResult().page.funds,
       campaigns: [
@@ -162,7 +163,7 @@ describe("public giving page", () => {
     expect(metadata).toEqual({
       title: "Give to Harbour <Grace> Church",
       description:
-        "View the current funds and campaigns for Harbour <Grace> Church. Online payments are not enabled yet.",
+        "View the current funds and campaigns for Harbour <Grace> Church. A payment-free development checkout is available; live payments remain disabled.",
     });
     expect(dynamic).toBe("force-dynamic");
   });

@@ -1169,6 +1169,118 @@ export type Database = {
           },
         ]
       }
+      mock_giving_checkout_sessions: {
+        Row: {
+          canceled_at: string | null
+          capability_sha256: string
+          checkout_reference: string
+          church_id: string
+          completed_at: string | null
+          completion_payload_sha256: string | null
+          connection_id: string
+          created_at: string
+          donation_id: string
+          donor_id: string
+          expires_at: string
+          frequency: string
+          id: string
+          payload_hmac_sha256: string
+          provider_payment_reference: string
+          provider_schedule_reference: string | null
+          recurring_gift_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          capability_sha256: string
+          checkout_reference: string
+          church_id: string
+          completed_at?: string | null
+          completion_payload_sha256?: string | null
+          connection_id: string
+          created_at?: string
+          donation_id: string
+          donor_id: string
+          expires_at: string
+          frequency: string
+          id?: string
+          payload_hmac_sha256: string
+          provider_payment_reference: string
+          provider_schedule_reference?: string | null
+          recurring_gift_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          capability_sha256?: string
+          checkout_reference?: string
+          church_id?: string
+          completed_at?: string | null
+          completion_payload_sha256?: string | null
+          connection_id?: string
+          created_at?: string
+          donation_id?: string
+          donor_id?: string
+          expires_at?: string
+          frequency?: string
+          id?: string
+          payload_hmac_sha256?: string
+          provider_payment_reference?: string
+          provider_schedule_reference?: string | null
+          recurring_gift_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mock_giving_checkout_sessions_church_fkey"
+            columns: ["church_id"]
+            isOneToOne: false
+            referencedRelation: "churches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mock_giving_checkout_sessions_connection_tenant_fkey"
+            columns: ["church_id", "connection_id"]
+            isOneToOne: false
+            referencedRelation: "payment_provider_connections"
+            referencedColumns: ["church_id", "id"]
+          },
+          {
+            foreignKeyName: "mock_giving_checkout_sessions_donation_tenant_fkey"
+            columns: ["church_id", "donation_id", "donor_id"]
+            isOneToOne: false
+            referencedRelation: "donations"
+            referencedColumns: ["church_id", "id", "donor_id"]
+          },
+          {
+            foreignKeyName: "mock_giving_checkout_sessions_donor_tenant_fkey"
+            columns: ["church_id", "donor_id"]
+            isOneToOne: false
+            referencedRelation: "donors"
+            referencedColumns: ["church_id", "id"]
+          },
+          {
+            foreignKeyName: "mock_giving_checkout_sessions_recurring_tenant_fkey"
+            columns: [
+              "church_id",
+              "recurring_gift_id",
+              "donor_id",
+              "connection_id",
+            ]
+            isOneToOne: false
+            referencedRelation: "recurring_gifts"
+            referencedColumns: [
+              "church_id",
+              "id",
+              "donor_id",
+              "payment_connection_id",
+            ]
+          },
+        ]
+      }
       payment_provider_connections: {
         Row: {
           capabilities: Json
@@ -2168,6 +2280,25 @@ export type Database = {
         Returns: boolean
       }
       audit_scalar_is_safe: { Args: { candidate: string }; Returns: boolean }
+      begin_mock_giving_checkout: {
+        Args: {
+          amount_minor: number
+          capability_token: string
+          church_slug: string
+          donor_display_name: string
+          donor_email: string
+          frequency: string
+          target_id: string
+          target_kind: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_start_result"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_start_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       can_delete_church_logo: {
         Args: { candidate_path: string }
         Returns: boolean
@@ -2179,6 +2310,16 @@ export type Database = {
       can_upload_church_logo: {
         Args: { candidate_path: string }
         Returns: boolean
+      }
+      cancel_mock_giving_checkout: {
+        Args: { capability_token: string; checkout_id: string }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_state_result"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_state_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       canonicalize_campaign_description: {
         Args: { input_value: string }
@@ -2227,6 +2368,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      close_mock_giving_checkout: {
+        Args: {
+          closed_at: string
+          target_checkout_id: string
+          target_status: string
+        }
+        Returns: undefined
+      }
       complete_church_logo_cleanup: {
         Args: {
           logo_cleanup_path: string
@@ -2234,6 +2383,21 @@ export type Database = {
           target_church_id: string
         }
         Returns: boolean
+      }
+      complete_mock_giving_checkout: {
+        Args: {
+          capability_token: string
+          checkout_id: string
+          raw_body: string
+          signature: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_completion_result"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_completion_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       donor_text_has_unsafe_formatting: {
         Args: { input_value: string }
@@ -2296,6 +2460,16 @@ export type Database = {
           to: "church_staff_snapshot"
           isOneToOne: true
           isSetofReturn: false
+        }
+      }
+      get_mock_giving_checkout: {
+        Args: { capability_token: string; checkout_id: string }
+        Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_record"]
+        SetofOptions: {
+          from: "*"
+          to: "mock_giving_checkout_record"
+          isOneToOne: true
+          isSetofReturn: true
         }
       }
       get_my_church_permissions: {
@@ -2394,6 +2568,14 @@ export type Database = {
       is_valid_provisioning_email: {
         Args: { candidate: string }
         Returns: boolean
+      }
+      lock_mock_giving_checkout_connection: {
+        Args: { target_checkout_id: string }
+        Returns: boolean
+      }
+      mock_hmac_sha256_hex: {
+        Args: { message_value: string; secret_value: string }
+        Returns: string
       }
       mutate_church_campaign: {
         Args: {
@@ -2839,6 +3021,41 @@ export type Database = {
         staff:
           | Database["public"]["CompositeTypes"]["church_staff_record"][]
           | null
+      }
+      mock_giving_checkout_completion_result: {
+        checkout_id: string | null
+        checkout_status: string | null
+        donation_status: string | null
+        recurring_status: string | null
+        replayed: boolean | null
+      }
+      mock_giving_checkout_record: {
+        checkout_id: string | null
+        church_slug: string | null
+        church_name: string | null
+        fund_name: string | null
+        campaign_name: string | null
+        amount_minor_text: string | null
+        currency: string | null
+        frequency: string | null
+        checkout_status: string | null
+        expires_at: string | null
+        provider_payment_reference: string | null
+        provider_schedule_reference: string | null
+        thank_you_message: string | null
+      }
+      mock_giving_checkout_start_result: {
+        checkout_id: string | null
+        donation_id: string | null
+        expires_at: string | null
+        replayed: boolean | null
+      }
+      mock_giving_checkout_state_result: {
+        checkout_id: string | null
+        checkout_status: string | null
+        donation_status: string | null
+        recurring_status: string | null
+        replayed: boolean | null
       }
       my_donor_profile_mutation_result: {
         church_id: string | null
