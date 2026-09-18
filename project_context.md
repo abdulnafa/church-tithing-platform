@@ -1,8 +1,8 @@
 # Church Digital Tithing Platform - Project Context
 
-Last updated: 17 September 2026
+Last updated: 18 September 2026
 Repository: `church-tithing-platform`
-Current phase: P19 webhook persistence and replay safety is complete; P20 real transaction list is next
+Current phase: P20 real transaction list is in progress
 Public production alias (unchanged): https://church-tithing-platform-3k2j.vercel.app/
 Latest non-production preview branch: https://github.com/abdulnafa/church-tithing-platform/tree/codex/p17-preview-20260911
 
@@ -159,7 +159,7 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ### Phase 4 - Church operations, donor tools, and reporting
 
-- `[PENDING]` P20 - Replace demo transaction data with server-paginated records and full filters for date, donor, amount, category, recurring state, card last four, payment status, and cancellation state.
+- `[IN PROGRESS]` P20 - Replacing demo transaction data with tenant-safe server-paginated records and full filters for date, donor, amount, category, recurring state, card last four, payment status, and cancellation state.
 - `[PENDING]` P21 - Move CSV/report generation to permission-checked server code using real data.
 - `[PENDING]` P22 - Implement weekly, monthly, yearly, and full-history reports with accurate gross, fee, net, and currency handling.
 - `[PENDING]` P23 - Implement donor recurring-gift pause, resume, amount/category/payment-method change, and cancellation through provider capability checks.
@@ -214,4 +214,4 @@ A preview screen, mock adapter, SQL file, or interface contract is not the same 
 
 ## Next task
 
-`P20 - Real transaction list` is `[PENDING]` and is the next implementation task. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.
+`P20 - Real transaction list` is `[IN PROGRESS]`. Live donations must remain disabled, and prayer text and consent must remain unsent and unsaved until the separate P37 policy decisions and approved consent wording are complete.

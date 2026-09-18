@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChurchTransactions } from "@/components/church-transactions";
 import { SectionHeader, StatCard } from "@/components/dashboard-shell";
 import { GivingQr } from "@/components/giving-qr";
 import { ArrowRightIcon, CalendarIcon, CardIcon, CheckIcon, HeartIcon, SettingsIcon, UsersIcon } from "@/components/icons";
 import { getChurchOverviewVisibility } from "@/lib/auth/church-overview-access";
 import { requireChurchPermission } from "@/lib/auth/guards";
 import { createShellIdentity } from "@/lib/auth/workspaces";
-import {
-  createChurchTransactionExportDetails,
-  createChurchTransactionFundOptions,
-  createChurchTransactionRows,
-} from "@/lib/church-transaction-view";
 import {
   getPublicAppUrl,
   isLocalAppUrl,
@@ -62,16 +56,6 @@ export default async function ChurchDashboardPage() {
         0,
       )
     : 0;
-  const transactionRows = visibility.recentTransactions
-    ? createChurchTransactionRows(demoDonations)
-    : [];
-  const transactionFunds = visibility.recentTransactions
-    ? createChurchTransactionFundOptions(demoFunds)
-    : [];
-  const transactionExportDetails = visibility.reportsExport
-    ? createChurchTransactionExportDetails(demoDonations)
-    : null;
-
   return (
     <div className="mx-auto max-w-[1320px] pb-24" key={workspace.churchId}>
         <div className="mb-6 flex flex-col gap-4 lg:hidden">
@@ -135,20 +119,19 @@ export default async function ChurchDashboardPage() {
             {visibility.recentTransactions ? (
               <section className="soft-card rounded-[22px] p-5 sm:p-6" id="transactions">
                 <SectionHeader action={<Link className="text-[10px] font-bold text-[var(--sage)]" href="/church/transactions">View all →</Link>} eyebrow="Bookkeeping" title="Recent transactions" />
-                {transactionExportDetails ? (
-                  <ChurchTransactions
-                    canExport
-                    exportDetails={transactionExportDetails}
-                    funds={transactionFunds}
-                    rows={transactionRows}
-                  />
-                ) : (
-                  <ChurchTransactions
-                    canExport={false}
-                    funds={transactionFunds}
-                    rows={transactionRows}
-                  />
-                )}
+                <div className="mt-5 rounded-[20px] border border-[#cddfd8] bg-[var(--sage-pale)] p-5">
+                  <p className="text-sm font-bold">Saved transaction ledger</p>
+                  <p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--muted)]">
+                    Review the church&apos;s real transaction records with server-side date,
+                    donor, amount, category, recurrence, card, payment, and cancellation filters.
+                  </p>
+                  <Link
+                    className="focus-ring mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--sage)] px-5 py-2.5 text-xs font-bold text-white"
+                    href="/church/transactions"
+                  >
+                    Open transactions <ArrowRightIcon size={15} />
+                  </Link>
+                </div>
               </section>
             ) : null}
 

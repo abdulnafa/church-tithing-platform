@@ -104,6 +104,8 @@ describe("church overview permission rendering", () => {
     expect(markup).toContain("Registered members");
     expect(markup).toContain("Weekly giving");
     expect(markup).toContain("Recent transactions");
+    expect(markup).toContain("Saved transaction ledger");
+    expect(markup).toContain("Open transactions");
     expect(markup).toContain("Demo campaign preview");
     expect(markup).toContain("Example active campaigns");
     expect(markup).toContain("Shared examples for layout preview");
@@ -112,7 +114,7 @@ describe("church overview permission rendering", () => {
     expect(markup).toContain("Payment connection");
     expect(markup).toContain("Fund mix");
     expect(markup).toContain("Full report");
-    expect(markup).toContain("Export CSV");
+    expect(markup).not.toContain("Export CSV");
     expect(markup).toContain("Open settings");
   });
 
@@ -160,7 +162,7 @@ describe("church overview permission rendering", () => {
     expect(getChurchQrSnapshotMock).not.toHaveBeenCalled();
   });
 
-  it("separates report navigation from report export", async () => {
+  it("defers CSV export while preserving report navigation", async () => {
     usePermissions([
       "workspace_read",
       "financial_read",
@@ -175,7 +177,8 @@ describe("church overview permission rendering", () => {
       "reports_read",
       "reports_export",
     ]);
-    expect(await renderOverview()).toContain("Export CSV");
+    expect(await renderOverview()).toContain("Full report");
+    expect(await renderOverview()).not.toContain("Export CSV");
   });
 
   it("renders the persisted church QR without static demo routing data", async () => {

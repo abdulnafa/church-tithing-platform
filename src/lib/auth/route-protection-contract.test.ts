@@ -179,7 +179,6 @@ describe("protected route source contract", () => {
     expect(overview).toContain("visibility.recentTransactions");
     expect(overview).toContain("visibility.recurringMembers");
     expect(overview).toContain("visibility.fullReportLink");
-    expect(overview).toContain("visibility.reportsExport");
     expect(overview).toContain("visibility.campaigns");
     expect(overview).toContain("visibility.givingQr");
     expect(overview).toContain("visibility.fundMix");
@@ -187,21 +186,33 @@ describe("protected route source contract", () => {
     expect(overview).toContain("visibility.providerSettingsLink");
   });
 
-  it("gates report and transaction CSV controls on the explicit export grant", () => {
+  it("keeps report exports permission-gated while transactions use the protected server ledger", () => {
     const reports = source("src/app/church/reports/page.tsx");
     const transactions = source("src/app/church/transactions/page.tsx");
     const transactionTable = source("src/components/church-transactions.tsx");
 
+    expect(reports).toContain('requireChurchPermission("reports_read")');
     expect(reports).toContain('"reports_export"');
     expect(reports).toContain("const reportCsv = canExport ?");
     expect(reports).toContain("{canExport ? (");
-    expect(transactions).toContain('"reports_read"');
-    expect(transactions).toContain('"reports_export"');
-    expect(transactions).toContain("const transactionExportDetails = canExport");
-    expect(transactions).toContain("canExport={false}");
-    expect(transactionTable).toContain("canExport: false");
-    expect(transactionTable).toContain("canExport: true");
-    expect(transactionTable).toContain("{props.canExport ? (");
+    expect(reports).toContain("data:text/csv;charset=utf-8");
+
+    expect(transactions).toContain(
+      'requireChurchPermission("financial_read")',
+    );
+    expect(transactions).toContain(
+      'import { getChurchTransactionPage } from "@/lib/church-transactions-dal"',
+    );
+    expect(transactions).toContain(
+      "getChurchTransactionPage(client, workspace.churchId",
+    );
+
+    for (const transactionSource of [transactions, transactionTable]) {
+      expect(transactionSource).not.toContain('"reports_read"');
+      expect(transactionSource).not.toContain('"reports_export"');
+      expect(transactionSource).not.toContain("data:text/csv");
+      expect(transactionSource).not.toContain("Export CSV");
+    }
   });
 
   it("keeps all account-state and workspace-selection pages outside protected layouts", () => {

@@ -2513,6 +2513,31 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      get_church_transaction_page: {
+        Args: {
+          target_church_id: string
+          transaction_cancellation_state?: string
+          transaction_cursor_created_at?: string
+          transaction_cursor_id?: string
+          transaction_date_from?: string
+          transaction_date_to?: string
+          transaction_donor_query?: string
+          transaction_fund_id?: string
+          transaction_last4?: string
+          transaction_max_amount_minor?: number
+          transaction_min_amount_minor?: number
+          transaction_page_size?: number
+          transaction_payment_status?: Database["public"]["Enums"]["donation_status"]
+          transaction_recurring_state?: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["church_transaction_page"]
+        SetofOptions: {
+          from: "*"
+          to: "church_transaction_page"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_mock_giving_checkout: {
         Args: { capability_token: string; checkout_id: string }
         Returns: Database["public"]["CompositeTypes"]["mock_giving_checkout_record"]
@@ -3111,6 +3136,45 @@ export type Database = {
         staff:
           | Database["public"]["CompositeTypes"]["church_staff_record"][]
           | null
+      }
+      church_transaction_fund_option: {
+        fund_id: string | null
+        fund_name: string | null
+        fund_status: Database["public"]["Enums"]["fund_status"] | null
+      }
+      church_transaction_page: {
+        church_id: string | null
+        church_timezone: string | null
+        transactions:
+          | Database["public"]["CompositeTypes"]["church_transaction_record"][]
+          | null
+        fund_options:
+          | Database["public"]["CompositeTypes"]["church_transaction_fund_option"][]
+          | null
+        next_cursor_created_at: string | null
+        next_cursor_transaction_id: string | null
+        has_more: boolean | null
+      }
+      church_transaction_record: {
+        transaction_id: string | null
+        church_id: string | null
+        donor_name: string | null
+        fund_id: string | null
+        fund_name: string | null
+        campaign_id: string | null
+        campaign_name: string | null
+        recorded_at: string | null
+        frequency: string | null
+        recurring_status: string | null
+        amount_minor: number | null
+        currency: string | null
+        processing_fee_minor: number | null
+        refunded_amount_minor: number | null
+        net_amount_minor: number | null
+        payment_method_brand: string | null
+        payment_method_last4: string | null
+        payment_status: Database["public"]["Enums"]["donation_status"] | null
+        cancellation_state: string | null
       }
       mock_giving_checkout_completion_result: {
         checkout_id: string | null
