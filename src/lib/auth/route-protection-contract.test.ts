@@ -41,7 +41,6 @@ describe("protected route source contract", () => {
   it.each([
     ["src/app/church/page.tsx", "workspace_read"],
     ["src/app/church/transactions/page.tsx", "financial_read"],
-    ["src/app/church/reports/page.tsx", "reports_read"],
     ["src/app/church/qr/page.tsx", "qr_read"],
     ["src/app/church/settings/page.tsx", "settings_manage"],
   ])("protects church leaf %s with named permission %s", (path, permission) => {
@@ -54,6 +53,17 @@ describe("protected route source contract", () => {
 
     expect(pageExport).toBeGreaterThan(-1);
     expect(guardCall).toBeGreaterThan(pageExport);
+    expect(page).not.toContain("requireChurchWorkspace");
+  });
+
+  it("requires both financial and report access on the aggregate reports page", () => {
+    const page = source("src/app/church/reports/page.tsx");
+    const pageExport = page.indexOf("export default async function");
+    const guardCall = page.indexOf("requireChurchPermissions([", pageExport);
+
+    expect(guardCall).toBeGreaterThan(pageExport);
+    expect(page).toContain('"financial_read"');
+    expect(page).toContain('"reports_read"');
     expect(page).not.toContain("requireChurchWorkspace");
   });
 
@@ -194,12 +204,16 @@ describe("protected route source contract", () => {
     const transactions = source("src/app/church/transactions/page.tsx");
     const transactionTable = source("src/components/church-transactions.tsx");
 
-    expect(reports).toContain('requireChurchPermission("reports_read")');
+    expect(reports).toContain("requireChurchPermissions([");
+    expect(reports).toContain('"financial_read"');
+    expect(reports).toContain('"reports_read"');
     expect(reports).toContain('"reports_export"');
     expect(reports).toContain("{canExport ? (");
-    expect(reports).toContain(
-      'href="/church/reports/export?period=all"',
-    );
+    expect(reports).toContain('"/church/reports/export"');
+    expect(reports).toContain("getChurchGivingReport(");
+    expect(reports).toContain("report.currencySummaries");
+    expect(reports).not.toContain("demoGiving");
+    expect(reports).not.toContain("demoDonations");
     expect(reports).not.toContain("data:text/csv");
 
     expect(reportExport).toContain("export const dynamic = \"force-dynamic\"");

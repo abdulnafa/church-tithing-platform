@@ -1,200 +1,570 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+
 import { SectionHeader, StatCard } from "@/components/dashboard-shell";
-import { CalendarIcon, CardIcon, ChartIcon, DownloadIcon, HeartIcon } from "@/components/icons";
-import { requireChurchPermission } from "@/lib/auth/guards";
+import {
+  CalendarIcon,
+  CardIcon,
+  ChartIcon,
+  DownloadIcon,
+  HeartIcon,
+  ShieldIcon,
+} from "@/components/icons";
+import { requireChurchPermissions } from "@/lib/auth/guards";
 import { hasChurchPermission } from "@/lib/auth/permissions";
 import {
-  demoDonations,
-  demoFundBreakdown,
-  demoGivingSummary,
-  demoGivingTrend,
-  formatMoney,
-  formatPercentage,
-} from "@/lib";
+  CHURCH_GIVING_REPORT_PERIOD_OPTIONS,
+  formatChurchGivingReportAmount,
+  formatChurchGivingReportPercentage,
+  getChurchGivingReportPercentageBasisPoints,
+  getChurchGivingReportPeriodDescription,
+  getChurchGivingReportPeriodLabel,
+  parseChurchGivingReportSearchParams,
+  type ChurchGivingReport,
+  type ChurchGivingReportCurrency,
+  type ChurchGivingReportPeriod,
+} from "@/lib/church-giving-report";
+import { getChurchGivingReport } from "@/lib/church-giving-report-dal";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Church giving reports",
-  description: "Review giving trends, fund performance and settlement totals for Harbour Grace Church.",
+  description:
+    "Review saved church giving totals, trends, fees, refunds, and recorded net amounts.",
 };
 
-export default async function ChurchReportsPage() {
-  const { workspace } = await requireChurchPermission("reports_read");
-  const canExport =
-    hasChurchPermission(workspace.permissions, "financial_read") &&
-    hasChurchPermission(workspace.permissions, "reports_export");
-  const maximumTrend = Math.max(...demoGivingTrend.map((point) => point.total.amountMinor));
-  const sixWeekTotal = demoGivingTrend.reduce((total, point) => total + point.total.amountMinor, 0);
-  const grossGiving = demoDonations.reduce((total, donation) => total + donation.amount.amountMinor, 0);
-  const processingFees = demoDonations.reduce((total, donation) => total + donation.processingFee.amountMinor, 0);
-  const netGiving = demoDonations.reduce((total, donation) => total + donation.netAmount.amountMinor, 0);
-  const averageGift = Math.round(grossGiving / demoDonations.length);
-  const recurringAmount = demoDonations
-    .filter((donation) => donation.recurringGiftId)
-    .reduce((total, donation) => total + donation.amount.amountMinor, 0);
-  const oneTimeAmount = grossGiving - recurringAmount;
+type ChurchReportsPageProps = Readonly<{
+  searchParams?: Promise<
+    Readonly<Record<string, string | readonly string[] | undefined>>
+  >;
+}>;
+
+const REPORT_DATE_FORMATTER = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
+
+function toUrlSearchParams(
+  query: Readonly<Record<string, string | readonly string[] | undefined>>,
+) {
+  const result = new URLSearchParams();
+  for (const [name, value] of Object.entries(query)) {
+    if (typeof value === "string") result.append(name, value);
+    else if (Array.isArray(value)) {
+      for (const item of value) result.append(name, item);
+    }
+  }
+  return result;
+}
+
+function createReportHref(
+  pathname: string,
+  period: ChurchGivingReportPeriod,
+  asOfDate: string | null,
+) {
+  const params = new URLSearchParams({ period });
+  if (asOfDate) params.set("asOf", asOfDate);
+  return `${pathname}?${params.toString()}`;
+}
+
+function formatReportDate(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  return REPORT_DATE_FORMATTER.format(new Date(Date.UTC(year, month - 1, day)));
+}
+
+function formatReportRange(report: ChurchGivingReport) {
+  return report.periodStartDate === null
+    ? `Through ${formatReportDate(report.periodEndDate)}`
+    : `${formatReportDate(report.periodStartDate)} - ${formatReportDate(report.periodEndDate)}`;
+}
+
+function maximumAmount(values: readonly bigint[]) {
+  return values.reduce(
+    (maximum, value) => (value > maximum ? value : maximum),
+    BigInt(0),
+  );
+}
+
+function percentageWidth(part: bigint, total: bigint) {
+  return getChurchGivingReportPercentageBasisPoints(part, total) / 100;
+}
+
+export default async function ChurchReportsPage({
+  searchParams = Promise.resolve({}),
+}: ChurchReportsPageProps = {}) {
+  const { workspace } = await requireChurchPermissions([
+    "financial_read",
+    "reports_read",
+  ]);
+  const parsed = parseChurchGivingReportSearchParams(
+    toUrlSearchParams(await searchParams),
+  );
+
+  if (!parsed.ok) return <ReportPageState state="invalid" />;
+  const retryHref = createReportHref(
+    "/church/reports",
+    parsed.selection.period,
+    parsed.selection.asOfDate,
+  );
+
+  let result: Awaited<ReturnType<typeof getChurchGivingReport>>;
+  try {
+    const client = await createServerSupabaseClient();
+    result = await getChurchGivingReport(
+      client,
+      workspace.churchId,
+      parsed.selection,
+    );
+  } catch {
+    return <ReportPageState retryHref={retryHref} state="unavailable" />;
+  }
+
+  if (!result.ok) {
+    return (
+      <ReportPageState
+        retryHref={retryHref}
+        state={result.reason === "invalid_request" ? "invalid" : "unavailable"}
+      />
+    );
+  }
+
+  const report = result.report;
+  const canExport = hasChurchPermission(
+    workspace.permissions,
+    "reports_export",
+  );
+  const exportHref = createReportHref(
+    "/church/reports/export",
+    report.period,
+    report.asOfDate,
+  );
 
   return (
-    <main className="mx-auto max-w-[1320px] pb-24" key={workspace.churchId}>
-        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:hidden">
-          <div>
-            <p className="text-xs text-[var(--muted)]">Financial snapshot</p>
-            <h1 className="font-display mt-1 text-3xl tracking-[-0.035em]">Giving reports</h1>
-          </div>
-          {canExport ? (
-            <a
-              className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-xs font-bold text-white"
-              href="/church/reports/export?period=all"
-            >
-              <DownloadIcon size={16} /> Export CSV
-            </a>
-          ) : null}
+    <main
+      className="mx-auto min-w-0 max-w-[1320px] pb-24"
+      key={workspace.churchId}
+    >
+      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between lg:hidden">
+        <div>
+          <p className="text-xs font-semibold text-[var(--sage)]">
+            Saved financial records
+          </p>
+          <h1 className="font-display mt-1 text-3xl tracking-[-0.035em]">
+            Giving reports
+          </h1>
         </div>
+        {canExport ? <ExportLink href={exportHref} /> : null}
+      </header>
 
-        <section className="mb-6 flex flex-col gap-4 rounded-[22px] bg-[var(--ink)] p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <section className="mb-6 rounded-[22px] border border-[#cddfd8] bg-[var(--sage-pale)] p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-[var(--sage)] text-white">
+            <CalendarIcon size={19} />
+          </span>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8fd0c0]">Report period</p>
-            <h2 className="mt-2 text-lg font-bold">11–17 August 2026</h2>
-            <p className="mt-1 text-xs leading-5 text-white/60">Seeded demo records for bookkeeping review and reporting workflow validation.</p>
+            <h2 className="text-sm font-bold">Choose a reporting period</h2>
+            <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
+              Period boundaries use the church timezone: {report.churchTimezone}.
+            </p>
           </div>
-          {canExport ? (
-            <a
-              className="focus-ring hidden shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold !text-[#122235] sm:inline-flex"
-              href="/church/reports/export?period=all"
+        </div>
+        <nav
+          aria-label="Giving report period"
+          className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+        >
+          {CHURCH_GIVING_REPORT_PERIOD_OPTIONS.map((option) => (
+            <Link
+              aria-current={option.value === report.period ? "page" : undefined}
+              className={`focus-ring rounded-2xl border px-4 py-3 text-left ${
+                option.value === report.period
+                  ? "border-[var(--sage)] bg-white shadow-sm"
+                  : "border-transparent bg-white/55 hover:border-[#b8d2c7] hover:bg-white"
+              }`}
+              href={createReportHref(
+                "/church/reports",
+                option.value,
+                report.asOfDate,
+              )}
+              key={option.value}
             >
-              <DownloadIcon size={16} /> Export CSV
-            </a>
-          ) : null}
+              <span className="block text-xs font-bold">{option.label}</span>
+              <span className="mt-1 block text-[10px] leading-4 text-[var(--muted)]">
+                {option.description}
+              </span>
+            </Link>
+          ))}
+        </nav>
+      </section>
+
+      <section className="mb-6 flex flex-col gap-4 rounded-[22px] bg-[var(--ink)] p-5 text-white sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#8fd0c0]">
+            {getChurchGivingReportPeriodLabel(report.period)}
+          </p>
+          <h2 className="mt-2 text-lg font-bold">{formatReportRange(report)}</h2>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-white/65">
+            {getChurchGivingReportPeriodDescription(report.period)} Totals use
+            confirmed post-capture records through the selected local date.
+          </p>
+        </div>
+        {canExport ? (
+          <div className="hidden shrink-0 lg:block">
+            <ExportLink href={exportHref} light />
+          </div>
+        ) : null}
+      </section>
+
+      {report.currencySummaries.length === 0 ? (
+        <section className="soft-card rounded-[22px] p-6 text-center sm:p-8">
+          <ChartIcon className="mx-auto text-[var(--sage)]" size={25} />
+          <h2 className="font-display mt-4 text-2xl tracking-[-0.03em]">
+            No captured gifts in this period
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-xs leading-5 text-[var(--muted)]">
+            Choose another period or export the current empty report. Pending,
+            failed, and canceled payment attempts are not financial totals.
+          </p>
         </section>
-
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard
-            icon={<ChartIcon size={19} />}
-            label="Six-week giving"
-            note="13 July–17 August"
-            value={formatMoney({ amountMinor: sixWeekTotal, currency: "BBD" })}
-          />
-          <StatCard
-            icon={<HeartIcon size={19} />}
-            label="This week"
-            note={`${demoGivingSummary.transactionCount} completed gifts`}
-            tone="blue"
-            value={formatMoney(demoGivingSummary.total)}
-          />
-          <StatCard
-            icon={<CardIcon size={19} />}
-            label="Average gift"
-            note={`${demoGivingSummary.uniqueDonorCount} unique donors`}
-            tone="gold"
-            value={formatMoney({ amountMinor: averageGift, currency: "BBD" })}
-          />
-          <StatCard
-            icon={<CalendarIcon size={19} />}
-            label="Recurring this week"
-            note={`${demoGivingSummary.activeRecurringCount} active schedules`}
-            tone="coral"
-            value={formatMoney({ amountMinor: recurringAmount, currency: "BBD" })}
-          />
-        </div>
-
-        <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(300px,.75fr)]">
-          <section className="soft-card rounded-[22px] p-5 sm:p-6">
-            <SectionHeader
-              action={<span className="rounded-full border border-[var(--line)] bg-white px-3 py-2 text-[10px] font-bold">Last 6 weeks</span>}
-              eyebrow="Giving trend"
-              title="Weekly giving"
+      ) : (
+        <div className="space-y-8">
+          {report.currencySummaries.map((summary) => (
+            <CurrencyReport
+              currency={summary.currency}
+              key={summary.currency}
+              report={report}
             />
-            <div className="mt-7 grid h-64 grid-cols-6 items-end gap-2 sm:gap-4" role="img" aria-label="Weekly giving totals for the last six weeks">
-              {demoGivingTrend.map((point, index) => {
-                const height = Math.max(18, Math.round((point.total.amountMinor / maximumTrend) * 100));
-                const isCurrent = index === demoGivingTrend.length - 1;
-                return (
-                  <div className="flex h-full min-w-0 flex-col justify-end" key={point.label}>
-                    <p className="mb-2 hidden text-center text-[9px] font-bold text-[var(--muted)] sm:block">{formatMoney(point.total)}</p>
+          ))}
+        </div>
+      )}
+
+      <section className="mt-8 flex min-w-0 items-start gap-3 rounded-[22px] bg-[var(--ink)] p-5 text-white sm:p-6">
+        <span className="grid size-10 shrink-0 place-items-center rounded-2xl bg-white/[0.08] text-[#b9d7cb]">
+          <ShieldIcon size={19} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-bold">How to read these totals</h2>
+          <p className="mt-1 max-w-4xl text-[10px] leading-5 text-white/65">
+            These are current saved-ledger totals, not settlement or payout
+            totals. Refund amounts are cumulative current values and do not
+            reconstruct the date each refund occurred. Provider statements
+            remain the accounting source of truth, and currencies are never
+            combined.
+          </p>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function ExportLink({
+  href,
+  light = false,
+}: Readonly<{ href: string; light?: boolean }>) {
+  return (
+    <a
+      className={`focus-ring inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-xs font-bold ${
+        light
+          ? "bg-white !text-[#122235]"
+          : "bg-[var(--ink)] text-white"
+      }`}
+      href={href}
+    >
+      <DownloadIcon size={16} /> Export CSV
+    </a>
+  );
+}
+
+function CurrencyReport({
+  currency,
+  report,
+}: Readonly<{
+  currency: ChurchGivingReportCurrency;
+  report: ChurchGivingReport;
+}>) {
+  const summary = report.currencySummaries.find(
+    (item) => item.currency === currency,
+  );
+  if (!summary) return null;
+
+  const trend = report.trendPoints.filter((item) => item.currency === currency);
+  const funds = report.fundSummaries.filter((item) => item.currency === currency);
+  const giftTypes = report.giftTypeSummaries.filter(
+    (item) => item.currency === currency,
+  );
+  const trendMaximum = maximumAmount(
+    trend.map((item) => item.grossAmountMinor),
+  );
+
+  return (
+    <section aria-labelledby={`currency-${currency}`}>
+      <div className="mb-4 flex items-center gap-3">
+        <span className="rounded-full bg-[var(--sage-pale)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--sage-dark)]">
+          {currency}
+        </span>
+        <h2
+          className="font-display text-2xl tracking-[-0.03em]"
+          id={`currency-${currency}`}
+        >
+          Recorded ledger totals
+        </h2>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <StatCard
+          icon={<HeartIcon size={19} />}
+          label="Gross giving"
+          note={`${summary.giftCount.toString()} captured gifts`}
+          value={formatChurchGivingReportAmount(
+            summary.grossAmountMinor,
+            currency,
+          )}
+        />
+        <StatCard
+          icon={<CardIcon size={19} />}
+          label="Processing fees"
+          note="Saved provider fee value"
+          tone="gold"
+          value={formatChurchGivingReportAmount(
+            summary.processingFeeMinor,
+            currency,
+          )}
+        />
+        <StatCard
+          icon={<CalendarIcon size={19} />}
+          label="Refunded"
+          note="Cumulative current value"
+          tone="coral"
+          value={formatChurchGivingReportAmount(
+            summary.refundedAmountMinor,
+            currency,
+          )}
+        />
+        <StatCard
+          icon={<ChartIcon size={19} />}
+          label="Recorded net"
+          note="Gross minus fees and refunds"
+          tone="blue"
+          value={formatChurchGivingReportAmount(
+            summary.recordedNetAmountMinor,
+            currency,
+          )}
+        />
+        <StatCard
+          icon={<ShieldIcon size={19} />}
+          label="Gift count"
+          note="Post-capture records only"
+          value={summary.giftCount.toString()}
+        />
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.85fr)]">
+        <section className="soft-card min-w-0 rounded-[22px] p-5 sm:p-6">
+          <SectionHeader eyebrow={`${currency} trend`} title="Gross giving over time" />
+          {trend.length === 0 ? (
+            <p className="mt-6 text-xs text-[var(--muted)]">
+              No trend points are available for this period.
+            </p>
+          ) : (
+            <div className="mt-6">
+              <table className="sr-only">
+                <caption>{currency} gross giving trend details</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Period</th>
+                    <th scope="col">Gross</th>
+                    <th scope="col">Fees</th>
+                    <th scope="col">Refunded</th>
+                    <th scope="col">Recorded net</th>
+                    <th scope="col">Gifts</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trend.map((point) => (
+                    <tr key={`accessible-${point.bucketStart}-${point.currency}`}>
+                      <th scope="row">{point.bucketStart}</th>
+                      <td>
+                        {formatChurchGivingReportAmount(
+                          point.grossAmountMinor,
+                          currency,
+                        )}
+                      </td>
+                      <td>
+                        {formatChurchGivingReportAmount(
+                          point.processingFeeMinor,
+                          currency,
+                        )}
+                      </td>
+                      <td>
+                        {formatChurchGivingReportAmount(
+                          point.refundedAmountMinor,
+                          currency,
+                        )}
+                      </td>
+                      <td>
+                        {formatChurchGivingReportAmount(
+                          point.recordedNetAmountMinor,
+                          currency,
+                        )}
+                      </td>
+                      <td>{point.giftCount.toString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div
+                aria-hidden="true"
+                className="overflow-x-auto pb-2"
+              >
+                <div className="flex h-64 min-w-max items-end gap-3">
+                {trend.map((point) => (
+                  <div
+                    className="flex h-full w-20 shrink-0 flex-col justify-end"
+                    key={`${point.bucketStart}-${point.currency}`}
+                  >
+                    <p className="mb-2 truncate text-center text-[9px] font-bold text-[var(--muted)]">
+                      {formatChurchGivingReportAmount(
+                        point.grossAmountMinor,
+                        currency,
+                      )}
+                    </p>
                     <div className="relative h-[176px] overflow-hidden rounded-t-xl bg-[#ece9e1]">
                       <div
-                        className={`absolute inset-x-0 bottom-0 rounded-t-xl ${isCurrent ? "bg-[var(--sage)]" : "bg-[#afc9bf]"}`}
-                        style={{ height: `${height}%` }}
+                        className="absolute inset-x-0 bottom-0 rounded-t-xl bg-[var(--sage)]"
+                        style={{
+                          height: `${Math.max(
+                            2,
+                            percentageWidth(
+                              point.grossAmountMinor,
+                              trendMaximum,
+                            ),
+                          )}%`,
+                        }}
                       />
                     </div>
-                    <p className={`mt-2 truncate text-center text-[9px] ${isCurrent ? "font-bold text-[var(--ink)]" : "text-[var(--muted)]"}`}>{point.label}</p>
+                    <p className="mt-2 text-center text-[9px] text-[var(--muted)]">
+                      {point.bucketStart}
+                    </p>
                   </div>
-                );
-              })}
+                ))}
+                </div>
+              </div>
             </div>
-          </section>
+          )}
+        </section>
 
-          <section className="soft-card rounded-[22px] p-5 sm:p-6">
-            <SectionHeader eyebrow="Allocation" title="Giving by fund" />
-            <div className="mt-6 space-y-5">
-              {demoFundBreakdown.map((fund, index) => {
-                const barColors = ["bg-[var(--sage)]", "bg-[var(--gold)]", "bg-[#6e89a5]"];
-                return (
-                  <div key={fund.fundId}>
-                    <div className="flex items-end justify-between gap-4">
-                      <div>
-                        <p className="text-xs font-bold">{fund.fundName}</p>
-                        <p className="mt-1 text-[10px] text-[var(--muted)]">{formatMoney(fund.total)}</p>
-                      </div>
-                      <p className="text-sm font-bold">{formatPercentage(fund.percentage)}</p>
+        <section className="soft-card rounded-[22px] p-5 sm:p-6">
+          <SectionHeader eyebrow={`${currency} allocation`} title="Giving by fund" />
+          <div className="mt-6 space-y-5">
+            {funds.map((fund) => {
+              const percentage = getChurchGivingReportPercentageBasisPoints(
+                fund.grossAmountMinor,
+                summary.grossAmountMinor,
+              );
+              return (
+                <div key={`${fund.currency}-${fund.fundId}`}>
+                  <div className="flex items-end justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold">{fund.fundName}</p>
+                      <p className="mt-1 text-[10px] text-[var(--muted)]">
+                        {formatChurchGivingReportAmount(
+                          fund.grossAmountMinor,
+                          currency,
+                        )}{" "}
+                        across {fund.giftCount.toString()} gifts
+                      </p>
                     </div>
-                    <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#ece9e1]">
-                      <div className={`h-full rounded-full ${barColors[index] ?? "bg-[var(--sage)]"}`} style={{ width: `${fund.percentage}%` }} />
-                    </div>
+                    <p className="shrink-0 text-sm font-bold">
+                      {formatChurchGivingReportPercentage(percentage)}
+                    </p>
                   </div>
-                );
-              })}
-            </div>
-            <div className="mt-7 rounded-2xl bg-[var(--sage-pale)] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-[var(--sage-dark)]">Largest allocation</p>
-              <p className="mt-2 text-sm font-bold">Building Fund</p>
-              <p className="mt-1 text-[10px] leading-5 text-[var(--muted)]">51% of recorded giving supported church facilities this week.</p>
-            </div>
-          </section>
-        </div>
+                  <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-[#ece9e1]">
+                    <div
+                      className="h-full rounded-full bg-[var(--sage)]"
+                      style={{ width: `${percentage / 100}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <section className="soft-card rounded-[22px] p-5 sm:p-6">
-            <SectionHeader eyebrow="Reconciliation" title="Gross to net" />
-            <dl className="mt-5 divide-y divide-[var(--line)]">
-              <div className="flex items-center justify-between gap-4 py-3 first:pt-0">
-                <dt className="text-xs text-[var(--muted)]">Gross giving</dt>
-                <dd className="text-xs font-bold">{formatMoney({ amountMinor: grossGiving, currency: "BBD" })}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-xs text-[var(--muted)]">Estimated provider fees</dt>
-                <dd className="text-xs font-bold text-[var(--coral)]">− {formatMoney({ amountMinor: processingFees, currency: "BBD" })}</dd>
-              </div>
-              <div className="flex items-center justify-between gap-4 py-3">
-                <dt className="text-xs font-bold">Net recorded</dt>
-                <dd className="text-sm font-bold text-[var(--sage-dark)]">{formatMoney({ amountMinor: netGiving, currency: "BBD" })}</dd>
-              </div>
-            </dl>
-            <p className="mt-4 rounded-2xl bg-[#f3f1eb] px-4 py-3 text-[10px] leading-5 text-[var(--muted)]">Settlement mode: <strong className="text-[var(--ink)]">Direct to church</strong>. Final provider statements remain the accounting source of truth.</p>
-          </section>
-
-          <section className="soft-card rounded-[22px] p-5 sm:p-6">
-            <SectionHeader eyebrow="Gift type" title="One-time and recurring" />
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              <article className="rounded-[18px] bg-[#f3f1eb] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">One-time</p>
-                <p className="mt-3 text-lg font-bold">{formatMoney({ amountMinor: oneTimeAmount, currency: "BBD" })}</p>
-                <p className="mt-1 text-[10px] text-[var(--muted)]">{demoDonations.filter((item) => !item.recurringGiftId).length} gifts</p>
+      <section className="soft-card mt-6 rounded-[22px] p-5 sm:p-6">
+        <SectionHeader
+          eyebrow={`${currency} gift type`}
+          title="One-time and recurring"
+        />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          {(["one_time", "recurring"] as const).map((giftType) => {
+            const item = giftTypes.find((entry) => entry.giftType === giftType);
+            return (
+              <article
+                className={
+                  giftType === "recurring"
+                    ? "rounded-[18px] bg-[var(--sage-pale)] p-4"
+                    : "rounded-[18px] bg-[#f3f1eb] p-4"
+                }
+                key={giftType}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">
+                  {giftType === "one_time" ? "One-time" : "Recurring"}
+                </p>
+                <p className="mt-3 text-lg font-bold">
+                  {formatChurchGivingReportAmount(
+                    item?.grossAmountMinor ?? BigInt(0),
+                    currency,
+                  )}
+                </p>
+                <p className="mt-1 text-[10px] text-[var(--muted)]">
+                  {(item?.giftCount ?? BigInt(0)).toString()} captured gifts
+                </p>
               </article>
-              <article className="rounded-[18px] bg-[var(--sage-pale)] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--sage-dark)]">Recurring</p>
-                <p className="mt-3 text-lg font-bold">{formatMoney({ amountMinor: recurringAmount, currency: "BBD" })}</p>
-                <p className="mt-1 text-[10px] text-[var(--muted)]">{demoDonations.filter((item) => item.recurringGiftId).length} gifts</p>
-              </article>
-            </div>
-            <div className="mt-5 h-3 overflow-hidden rounded-full bg-[#ece9e1]" aria-label={`${formatPercentage((oneTimeAmount / grossGiving) * 100)} one-time and ${formatPercentage((recurringAmount / grossGiving) * 100)} recurring`} role="img">
-              <div className="h-full bg-[var(--gold)]" style={{ width: `${(oneTimeAmount / grossGiving) * 100}%` }} />
-            </div>
-            <div className="mt-3 flex items-center justify-between text-[9px] text-[var(--muted)]">
-              <span>{formatPercentage((oneTimeAmount / grossGiving) * 100)} one-time</span>
-              <span>{formatPercentage((recurringAmount / grossGiving) * 100)} recurring</span>
-            </div>
-          </section>
+            );
+          })}
         </div>
+      </section>
+    </section>
+  );
+}
+
+function ReportPageState({
+  retryHref = "/church/reports?period=all",
+  state,
+}: Readonly<{
+  retryHref?: string;
+  state: "invalid" | "unavailable";
+}>) {
+  const invalid = state === "invalid";
+  return (
+    <main className="mx-auto min-w-0 max-w-3xl pb-24">
+      <section
+        className="soft-card rounded-[24px] p-6 text-center sm:p-8"
+        role="alert"
+      >
+        <ShieldIcon className="mx-auto text-[var(--sage)]" size={24} />
+        <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--sage)]">
+          {invalid ? "Invalid report link" : "Reports unavailable"}
+        </p>
+        <h1 className="font-display mt-2 text-3xl tracking-[-0.035em]">
+          {invalid
+            ? "This report link is invalid."
+            : "Giving reports could not be loaded."}
+        </h1>
+        <p className="mx-auto mt-3 max-w-xl text-xs leading-5 text-[var(--muted)]">
+          {invalid
+            ? "Open the full-history report and choose the period again."
+            : "No financial totals are displayed in this state. Retry the permission-checked request."}
+        </p>
+        <Link
+          className="focus-ring mt-6 inline-flex rounded-full bg-[var(--sage)] px-5 py-3 text-xs font-bold text-white"
+          href={invalid ? "/church/reports?period=all" : retryHref}
+        >
+          {invalid ? "Open reports" : "Try again"}
+        </Link>
+      </section>
     </main>
   );
 }

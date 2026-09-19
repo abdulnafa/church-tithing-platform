@@ -2499,6 +2499,20 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_church_giving_report: {
+        Args: {
+          selected_as_of_date?: string
+          selected_period?: Database["public"]["Enums"]["church_report_period"]
+          target_church_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["church_giving_report_result"]
+        SetofOptions: {
+          from: "*"
+          to: "church_giving_report_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_church_qr_snapshot: {
         Args: { target_church_id: string }
         Returns: {
@@ -3091,6 +3105,64 @@ export type Database = {
         is_default: boolean | null
         sort_order: number | null
         funds_revision: number | null
+      }
+      church_giving_report_currency_summary: {
+        currency: string | null
+        gross_amount_minor: string | null
+        processing_fee_minor: string | null
+        refunded_amount_minor: string | null
+        recorded_net_amount_minor: string | null
+        gift_count: string | null
+      }
+      church_giving_report_fund_summary: {
+        fund_id: string | null
+        fund_name: string | null
+        currency: string | null
+        gross_amount_minor: string | null
+        processing_fee_minor: string | null
+        refunded_amount_minor: string | null
+        recorded_net_amount_minor: string | null
+        gift_count: string | null
+      }
+      church_giving_report_gift_type_summary: {
+        gift_type: string | null
+        currency: string | null
+        gross_amount_minor: string | null
+        processing_fee_minor: string | null
+        refunded_amount_minor: string | null
+        recorded_net_amount_minor: string | null
+        gift_count: string | null
+      }
+      church_giving_report_result: {
+        church_id: string | null
+        church_timezone: string | null
+        report_period:
+          | Database["public"]["Enums"]["church_report_period"]
+          | null
+        report_as_of_date: string | null
+        period_start_date: string | null
+        period_end_date: string | null
+        currency_summaries:
+          | Database["public"]["CompositeTypes"]["church_giving_report_currency_summary"][]
+          | null
+        trend_points:
+          | Database["public"]["CompositeTypes"]["church_giving_report_trend_point"][]
+          | null
+        fund_summaries:
+          | Database["public"]["CompositeTypes"]["church_giving_report_fund_summary"][]
+          | null
+        gift_type_summaries:
+          | Database["public"]["CompositeTypes"]["church_giving_report_gift_type_summary"][]
+          | null
+      }
+      church_giving_report_trend_point: {
+        bucket_start: string | null
+        currency: string | null
+        gross_amount_minor: string | null
+        processing_fee_minor: string | null
+        refunded_amount_minor: string | null
+        recorded_net_amount_minor: string | null
+        gift_count: string | null
       }
       church_provisioning_result: {
         church_id: string | null
