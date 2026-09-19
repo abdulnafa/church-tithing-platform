@@ -31,22 +31,33 @@ describe("church report export permission", () => {
     vi.clearAllMocks();
   });
 
-  it("renders report data but no download control without reports_export", async () => {
+  it("renders report data but no download control without every export permission", async () => {
     usePermissions(["reports_read"]);
 
-    const markup = renderToStaticMarkup(await ChurchReportsPage());
+    let markup = renderToStaticMarkup(await ChurchReportsPage());
 
     expect(markup).toContain("Giving reports");
     expect(markup).not.toContain("Export CSV");
     expect(markup).not.toContain("data:text/csv");
+
+    usePermissions(["reports_read", "reports_export"]);
+    markup = renderToStaticMarkup(await ChurchReportsPage());
+    expect(markup).not.toContain("Export CSV");
+
+    usePermissions(["reports_read", "financial_read"]);
+    markup = renderToStaticMarkup(await ChurchReportsPage());
+    expect(markup).not.toContain("Export CSV");
   });
 
-  it("renders responsive CSV download controls with reports_export", async () => {
-    usePermissions(["reports_read", "reports_export"]);
+  it("renders responsive secure-route controls with every export permission", async () => {
+    usePermissions(["reports_read", "financial_read", "reports_export"]);
 
     const markup = renderToStaticMarkup(await ChurchReportsPage());
 
     expect(markup.match(/Export CSV/g)).toHaveLength(2);
-    expect(markup).toContain("data:text/csv");
+    expect(markup.match(/href="\/church\/reports\/export\?period=all"/g))
+      .toHaveLength(2);
+    expect(markup).not.toContain("data:text/csv");
+    expect(markup).not.toContain("download=");
   });
 });

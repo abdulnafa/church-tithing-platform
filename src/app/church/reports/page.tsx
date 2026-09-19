@@ -6,10 +6,8 @@ import { hasChurchPermission } from "@/lib/auth/permissions";
 import {
   demoDonations,
   demoFundBreakdown,
-  demoFunds,
   demoGivingSummary,
   demoGivingTrend,
-  formatGivingFrequency,
   formatMoney,
   formatPercentage,
 } from "@/lib";
@@ -19,37 +17,11 @@ export const metadata: Metadata = {
   description: "Review giving trends, fund performance and settlement totals for Harbour Grace Church.",
 };
 
-function escapeCsv(value: string | number) {
-  const text = String(value);
-  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
-}
-
-function createReportCsv() {
-  const header = ["Date", "Donor", "Fund", "Gross (BBD)", "Fees (BBD)", "Net (BBD)", "Frequency", "Status", "Receipt"];
-  const rows = demoDonations.map((donation) => {
-    const fund = demoFunds.find((item) => item.id === donation.fundId);
-    return [
-      donation.createdAt.slice(0, 10),
-      donation.donor.name,
-      fund?.name ?? "Unknown fund",
-      (donation.amount.amountMinor / 100).toFixed(2),
-      (donation.processingFee.amountMinor / 100).toFixed(2),
-      (donation.netAmount.amountMinor / 100).toFixed(2),
-      formatGivingFrequency(donation.frequency),
-      donation.status,
-      donation.receiptNumber ?? "",
-    ];
-  });
-
-  return [header, ...rows].map((row) => row.map(escapeCsv).join(",")).join("\n");
-}
-
 export default async function ChurchReportsPage() {
   const { workspace } = await requireChurchPermission("reports_read");
-  const canExport = hasChurchPermission(
-    workspace.permissions,
-    "reports_export",
-  );
+  const canExport =
+    hasChurchPermission(workspace.permissions, "financial_read") &&
+    hasChurchPermission(workspace.permissions, "reports_export");
   const maximumTrend = Math.max(...demoGivingTrend.map((point) => point.total.amountMinor));
   const sixWeekTotal = demoGivingTrend.reduce((total, point) => total + point.total.amountMinor, 0);
   const grossGiving = demoDonations.reduce((total, donation) => total + donation.amount.amountMinor, 0);
@@ -60,7 +32,6 @@ export default async function ChurchReportsPage() {
     .filter((donation) => donation.recurringGiftId)
     .reduce((total, donation) => total + donation.amount.amountMinor, 0);
   const oneTimeAmount = grossGiving - recurringAmount;
-  const reportCsv = canExport ? createReportCsv() : "";
 
   return (
     <main className="mx-auto max-w-[1320px] pb-24" key={workspace.churchId}>
@@ -72,8 +43,7 @@ export default async function ChurchReportsPage() {
           {canExport ? (
             <a
               className="focus-ring inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-5 py-3 text-xs font-bold text-white"
-              download="harbour-grace-giving-2026-08-17.csv"
-              href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
+              href="/church/reports/export?period=all"
             >
               <DownloadIcon size={16} /> Export CSV
             </a>
@@ -89,8 +59,7 @@ export default async function ChurchReportsPage() {
           {canExport ? (
             <a
               className="focus-ring hidden shrink-0 items-center justify-center gap-2 rounded-full bg-white px-5 py-3 text-xs font-bold !text-[#122235] sm:inline-flex"
-              download="harbour-grace-giving-2026-08-17.csv"
-              href={`data:text/csv;charset=utf-8,${encodeURIComponent(reportCsv)}`}
+              href="/church/reports/export?period=all"
             >
               <DownloadIcon size={16} /> Export CSV
             </a>

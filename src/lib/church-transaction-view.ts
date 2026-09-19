@@ -28,13 +28,6 @@ export type ChurchTransactionFundOption = Readonly<{
   name: string;
 }>;
 
-/** Demo-only CSV fields. P21 replaces this with an audited server export. */
-export type ChurchTransactionExportDetail = Readonly<{
-  transactionId: string;
-  donorEmail: string;
-  processingFee: Money;
-}>;
-
 export function createChurchTransactionRows(
   donations: readonly Donation[],
 ): readonly ChurchTransactionRow[] {
@@ -61,17 +54,4 @@ export function createChurchTransactionFundOptions(
   funds: readonly GivingFund[],
 ): readonly ChurchTransactionFundOption[] {
   return funds.map(({ id, name }) => ({ id, name }));
-}
-
-export function createChurchTransactionExportDetails(
-  donations: readonly Donation[],
-): readonly ChurchTransactionExportDetail[] {
-  return donations.map((donation) => ({
-    transactionId: donation.id,
-    donorEmail: donation.donor.email,
-    processingFee: {
-      amountMinor: donation.processingFee.amountMinor,
-      currency: donation.processingFee.currency,
-    },
-  }));
 }

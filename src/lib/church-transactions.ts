@@ -189,8 +189,9 @@ function getSingleSearchValue(params: SearchParams, name: string) {
   } as const;
 }
 
-function isCanonicalDate(value: string) {
+export function isChurchTransactionDate(value: unknown): value is string {
   if (
+    typeof value !== "string" ||
     !DATE_PATTERN.test(value) ||
     value < CHURCH_TRANSACTION_MIN_DATE ||
     value > CHURCH_TRANSACTION_MAX_DATE
@@ -345,8 +346,8 @@ export function isChurchTransactionFilters(
 
   return (
     (dateFrom === null ||
-      (typeof dateFrom === "string" && isCanonicalDate(dateFrom))) &&
-    (dateTo === null || (typeof dateTo === "string" && isCanonicalDate(dateTo))) &&
+      (typeof dateFrom === "string" && isChurchTransactionDate(dateFrom))) &&
+    (dateTo === null || (typeof dateTo === "string" && isChurchTransactionDate(dateTo))) &&
     !(
       typeof dateFrom === "string" &&
       typeof dateTo === "string" &&
@@ -414,8 +415,8 @@ export function parseChurchTransactionSearchParams(
   const dateFrom = values.from.value;
   const dateTo = values.to.value;
   if (
-    (dateFrom !== null && !isCanonicalDate(dateFrom)) ||
-    (dateTo !== null && !isCanonicalDate(dateTo)) ||
+    (dateFrom !== null && !isChurchTransactionDate(dateFrom)) ||
+    (dateTo !== null && !isChurchTransactionDate(dateTo)) ||
     (dateFrom !== null && dateTo !== null && dateFrom > dateTo)
   ) {
     return { ok: false, reason: "invalid_request" };

@@ -2454,6 +2454,21 @@ export type Database = {
         Args: { input_value: string }
         Returns: boolean
       }
+      export_church_giving_report: {
+        Args: {
+          report_request_id: string
+          selected_as_of_date?: string
+          selected_period?: Database["public"]["Enums"]["church_report_period"]
+          target_church_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["church_report_export_result"]
+        SetofOptions: {
+          from: "*"
+          to: "church_report_export_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_church_campaign_progress: {
         Args: { target_church_id: string }
         Returns: Database["public"]["CompositeTypes"]["church_campaign_progress_record"][]
@@ -2946,6 +2961,7 @@ export type Database = {
         | "provider_status_read"
         | "email_status_read"
         | "prayer_requests_review"
+      church_report_period: "last_7_days" | "month" | "year" | "all"
       church_status:
         | "onboarding"
         | "active"
@@ -3086,6 +3102,38 @@ export type Database = {
         default_fund_id: string | null
         qr_short_code: string | null
         replayed: boolean | null
+      }
+      church_report_export_record: {
+        transaction_id: string | null
+        donated_at: string | null
+        donor_name: string | null
+        fund_name: string | null
+        campaign_name: string | null
+        source: Database["public"]["Enums"]["donation_source"] | null
+        frequency: string | null
+        recurring_status: string | null
+        gross_amount_minor: string | null
+        currency: string | null
+        processing_fee_minor: string | null
+        refunded_amount_minor: string | null
+        recorded_net_amount_minor: string | null
+        payment_method_brand: string | null
+        payment_method_last4: string | null
+        payment_status: Database["public"]["Enums"]["donation_status"] | null
+      }
+      church_report_export_result: {
+        church_id: string | null
+        church_slug: string | null
+        church_timezone: string | null
+        report_period:
+          | Database["public"]["Enums"]["church_report_period"]
+          | null
+        report_as_of_date: string | null
+        period_start_date: string | null
+        period_end_date: string | null
+        transactions:
+          | Database["public"]["CompositeTypes"]["church_report_export_record"][]
+          | null
       }
       church_settings_snapshot: {
         church_id: string | null
@@ -3521,6 +3569,7 @@ export const Constants = {
         "email_status_read",
         "prayer_requests_review",
       ],
+      church_report_period: ["last_7_days", "month", "year", "all"],
       church_status: [
         "onboarding",
         "active",

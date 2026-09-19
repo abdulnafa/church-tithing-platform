@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import { demoDonations, demoFunds } from "./demo-data";
 import {
-  createChurchTransactionExportDetails,
   createChurchTransactionFundOptions,
   createChurchTransactionRows,
 } from "./church-transaction-view";
@@ -31,13 +30,5 @@ describe("church transaction client DTOs", () => {
     expect(serialized).not.toContain("providerPaymentReference");
     expect(serialized).not.toContain("paymentMethod");
     expect(serialized).not.toContain("hasPrayerRequest");
-  });
-
-  it("limits the optional demo export DTO to the reviewed CSV fields", () => {
-    expect(createChurchTransactionExportDetails(demoDonations)[0]).toEqual({
-      transactionId: "donation_1006",
-      donorEmail: "alicia.clarke@example.com",
-      processingFee: { amountMinor: 775, currency: "BBD" },
-    });
   });
 });

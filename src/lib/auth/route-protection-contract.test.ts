@@ -188,14 +188,29 @@ describe("protected route source contract", () => {
 
   it("keeps report exports permission-gated while transactions use the protected server ledger", () => {
     const reports = source("src/app/church/reports/page.tsx");
+    const reportExport = source(
+      "src/app/church/reports/export/route.ts",
+    );
     const transactions = source("src/app/church/transactions/page.tsx");
     const transactionTable = source("src/components/church-transactions.tsx");
 
     expect(reports).toContain('requireChurchPermission("reports_read")');
     expect(reports).toContain('"reports_export"');
-    expect(reports).toContain("const reportCsv = canExport ?");
     expect(reports).toContain("{canExport ? (");
-    expect(reports).toContain("data:text/csv;charset=utf-8");
+    expect(reports).toContain(
+      'href="/church/reports/export?period=all"',
+    );
+    expect(reports).not.toContain("data:text/csv");
+
+    expect(reportExport).toContain("export const dynamic = \"force-dynamic\"");
+    expect(reportExport).toContain("requireChurchPermissions([");
+    expect(reportExport).toContain('"financial_read"');
+    expect(reportExport).toContain('"reports_read"');
+    expect(reportExport).toContain('"reports_export"');
+    expect(reportExport).toContain("exportChurchGivingReport(");
+    expect(reportExport).toContain("createChurchReportCsv(result.report)");
+    expect(reportExport).toContain('"Content-Disposition"');
+    expect(reportExport).not.toContain("data:text/csv");
 
     expect(transactions).toContain(
       'requireChurchPermission("financial_read")',
